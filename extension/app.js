@@ -90,6 +90,15 @@ async function openInWorkTab(url, { active = false } = {}) {
   return workTabId;
 }
 
+/** Retire le voile « ne touchez à rien » de l'onglet de travail à la fin d'une série de blocages. */
+async function releaseWorkTab() {
+  if (workTabId === null) return;
+  await chrome.scripting.executeScript({
+    target: { tabId: workTabId },
+    func: () => globalThis.__blockedex?.release?.(),
+  }).catch(() => {}); // onglet fermé entre-temps
+}
+
 async function callInPage(tabId, method) {
   await chrome.scripting.executeScript({ target: { tabId }, files: ['content.js'] });
   const [{ result }] = await chrome.scripting.executeScript({
@@ -480,6 +489,7 @@ $('start').addEventListener('click', async () => {
       refresh();
     },
   });
+  await releaseWorkTab();
   running = false;
   const parts = Object.entries(summary.counts).map(([s, n]) => `${n} ${LABELS[s][0]}`);
   log(`Terminé : ${parts.join(', ') || 'rien à faire'} ; ${summary.remaining} restants.`, summary.aborted ? 'warn' : 'ok');

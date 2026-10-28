@@ -35,10 +35,58 @@
     const svg = el.querySelector('svg[aria-label]');
     return svg ? svg.getAttribute('aria-label').trim() : '';
   };
-  // Les boutons « Bloquer » ajoutés par inline.js (classe blockedex-btn) ne font pas partie de Threads.
+  // --- Voile sur l'onglet de travail ---
+  // Pendant que blockedex manipule la page, un voile la recouvre : il explique qu'il ne faut pas y
+  // toucher et bloque souris, défilement et clavier de l'utilisateur. Nos propres actions (el.click(),
+  // scrollTop) ne passent pas par ces événements et continuent de fonctionner.
+  const OVERLAY_ID = 'blockedex-overlay';
+  const BLOCKED_EVENTS = ['click', 'mousedown', 'mouseup', 'pointerdown', 'pointerup', 'wheel', 'touchstart', 'touchmove', 'keydown', 'contextmenu'];
+  const swallow = (event) => {
+    if (!event.isTrusted) return; // nos événements simulés (Échap…) passent
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  };
+  function showOverlay(step) {
+    let overlay = document.getElementById(OVERLAY_ID);
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = OVERLAY_ID;
+      overlay.setAttribute('aria-live', 'polite');
+      overlay.innerHTML = `
+        <style>
+          #${OVERLAY_ID} { position: fixed; inset: 0; z-index: 2147483647; display: grid; place-items: center;
+            background: rgb(0 0 0 / 0.55); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; cursor: wait; }
+          #${OVERLAY_ID} .bx-card { max-width: min(460px, calc(100vw - 32px)); padding: 20px 22px; border-radius: 14px;
+            background: #fff; color: #15181e; box-shadow: 0 12px 40px rgb(0 0 0 / 0.35); border: 2px solid #b45309; }
+          #${OVERLAY_ID} .bx-head { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; color: #b45309; }
+          #${OVERLAY_ID} .bx-spin { flex: none; width: 18px; height: 18px; border: 3px solid #e5e7eb; border-top-color: #b45309;
+            border-radius: 50%; animation: bx-spin 0.8s linear infinite; }
+          #${OVERLAY_ID} .bx-step { margin: 12px 0 8px; font-weight: 600; }
+          #${OVERLAY_ID} .bx-hint { margin: 0; color: #5b6472; font-size: 13.5px; }
+          @keyframes bx-spin { to { transform: rotate(360deg); } }
+        </style>
+        <div class="bx-card">
+          <div class="bx-head"><span class="bx-spin"></span><span>blockedex travaille dans cet onglet : ne touchez à rien</span></div>
+          <p class="bx-step"></p>
+          <p class="bx-hint">Ne cliquez pas, ne faites pas défiler et ne fermez pas cet onglet : vous feriez échouer
+            l'opération. Vous serez ramené automatiquement sur la page blockedex, où l'avancement est affiché.</p>
+        </div>`;
+      // Hors de <body> : l'application Threads ne le touche pas et il n'entre pas dans le texte de la page.
+      document.documentElement.append(overlay);
+      for (const type of BLOCKED_EVENTS) window.addEventListener(type, swallow, { capture: true, passive: false });
+    }
+    if (step) overlay.querySelector('.bx-step').textContent = step;
+  }
+  function hideOverlay() {
+    document.getElementById(OVERLAY_ID)?.remove();
+    for (const type of BLOCKED_EVENTS) window.removeEventListener(type, swallow, { capture: true });
+  }
+  // Éléments ajoutés par blockedex (voile, boutons « Bloquer » d'inline.js) : à ignorer dans la page.
+  const isOurs = (el) => Boolean(el.closest(`#${OVERLAY_ID}, .blockedex-btn`));
+
   const find = (re, root = document) =>
     [...root.querySelectorAll('[role="button"],[role="menuitem"],button,a')]
-      .find((el) => isVisible(el) && !el.classList.contains('blockedex-btn') && re.test(labelOf(el)));
+      .find((el) => isVisible(el) && !isOurs(el) && re.test(labelOf(el)));
   // La navigation et l'en-tête de colonne ont aussi un bouton « Plus ». Le vrai Threads n'a pas de <main> :
   // on part du bouton d'action du profil (Suivre, Débloquer…) et on remonte jusqu'au premier « Plus ».
   const findMoreButton = () => {
@@ -151,8 +199,8 @@
   }
 
   const findRowByText = (re) =>
-    [...document.querySelectorAll('div,span,a,button,[role="button"]')].find((el) =>
-      isVisible(el) && [...el.childNodes].some((n) => n.nodeType === Node.TEXT_NODE && re.test(n.textContent.trim())));
+    [...document.querySelectorAll('div,span,a,button,[role="button"]')].find((el) => isVisible(el) && !isOurs(el)
+      && [...el.childNodes].some((n) => n.nodeType === Node.TEXT_NODE && re.test(n.textContent.trim())));
 
   // Sur le vrai Threads, les lignes de « Profils bloqués » n'ont pas de lien de profil : le pseudo est
   // la première ligne de texte de la ligne qui porte le bouton « Débloquer ».
@@ -189,8 +237,10 @@
     [...dialog.querySelectorAll('a[href^="/@"]')].map((a) => handleFromHref(a.getAttribute('href'))).filter(Boolean);
 
   // Étape en cours, affichée en direct sur la page blockedex (bandeau « Traitement en cours »).
-  const progress = (step, count) =>
+  const progress = (step, count) => {
+    if (document.getElementById(OVERLAY_ID)) showOverlay(step); // même étape sur le voile de l'onglet
     chrome.runtime.sendMessage({ type: 'blockedex:progress', step, count }).catch(() => {});
+  };
 
   /**
    * Fait défiler la liste de la fenêtre ouverte jusqu'au bout et renvoie les comptes lus.
@@ -290,5 +340,22 @@
     return { status: 'ok', handles, expected };
   }
 
-  globalThis.__blockedex = { blockProfile, exportBlocked, readFollowing };
+  // Chaque opération pose le voile pendant qu'elle travaille. Après un blocage il reste en place pendant
+  // la pause qui précède le compte suivant ; la page blockedex appelle `release` à la fin de la série.
+  const withOverlay = (fn, step, keepAfter) => async () => {
+    showOverlay(step);
+    try {
+      return await fn();
+    } finally {
+      if (keepAfter) showOverlay(keepAfter);
+      else hideOverlay();
+    }
+  };
+  globalThis.__blockedex = {
+    blockProfile: withOverlay(blockProfile, 'Blocage de ce compte en cours…',
+      'Compte traité. Pause avant le compte suivant : ne touchez toujours à rien.'),
+    exportBlocked: withOverlay(exportBlocked, 'Lecture de vos profils bloqués…'),
+    readFollowing: withOverlay(readFollowing, 'Lecture des abonnements de ce compte…'),
+    release: hideOverlay,
+  };
 })();
