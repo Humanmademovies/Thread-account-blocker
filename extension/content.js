@@ -188,11 +188,17 @@
   const profileLinks = (dialog) =>
     [...dialog.querySelectorAll('a[href^="/@"]')].map((a) => handleFromHref(a.getAttribute('href'))).filter(Boolean);
 
+  // Étape en cours, affichée en direct sur la page blockedex (bandeau « Traitement en cours »).
+  const progress = (step, count) =>
+    chrome.runtime.sendMessage({ type: 'blockedex:progress', step, count }).catch(() => {});
+
   /**
    * Fait défiler la liste de la fenêtre ouverte jusqu'au bout et renvoie les comptes lus.
    * `read(dialog)` extrait les pseudos affichés ; on s'arrête après 3 passages sans nouveau compte.
+   * `label` nomme la liste dans les messages de progression.
    */
-  async function collectList(read) {
+  async function collectList(read, label) {
+    progress(`${label} : chargement de la liste…`);
     // Toutes les fenêtres visibles : une autre fenêtre (avis, notification) peut se trouver au-dessus.
     const dialogs = () => [...document.querySelectorAll('[role="dialog"]')].filter(isVisible);
     const readNow = () => dialogs().flatMap(read);
@@ -206,10 +212,12 @@
     for (let round = 0; round < 2000 && idle < 3; round++) {
       const before = found.size;
       readNow().forEach((h) => found.add(h));
-      if (found.size === before) idle++;
-      else {
+      if (found.size === before) {
+        idle++;
+        if (found.size) progress(`${label} : ${found.size} comptes trouvés, vérification de la fin de la liste…`, found.size);
+      } else {
         idle = 0;
-        chrome.runtime.sendMessage({ type: 'blockedex:progress', count: found.size }).catch(() => {});
+        progress(`${label} : ${found.size} comptes trouvés, défilement…`, found.size);
       }
       const dialog = listDialog();
       if (dialog) scrollListToEnd(dialog);
@@ -223,6 +231,7 @@
     const state = await waitFor(() => (isLoginPage() ? 'login' : findRowByText(RE.blockedRow)), 20000);
     if (state === 'login') return { status: 'login_required' };
     if (!state) return fail('« Profils bloqués » introuvable dans les réglages');
+    progress('Ouverture de la liste « Profils bloqués »…');
 
     const read = (dialog) => [
       ...profileLinks(dialog),
@@ -237,7 +246,7 @@
     }, 4, 6000);
     if (!opened) return fail('la liste des profils bloqués ne s\'est pas ouverte');
 
-    const handles = await collectList(read);
+    const handles = await collectList(read, 'Profils bloqués');
     return { status: 'ok', handles };
   }
 
@@ -256,6 +265,7 @@
     if (state === 'login') return { status: 'login_required' };
     if (state === 'not_found') return { status: 'not_found' };
     if (state !== 'ready') return fail('compteur d\'abonnés introuvable sur le profil');
+    progress('Ouverture de la liste des abonnements…');
 
     const tabOf = () => {
       const dialog = currentDialog();
@@ -276,7 +286,7 @@
       await waitFor(() => profileLinks(currentDialog()).some((h) => !followers.has(h)), 6000);
     }
 
-    const handles = (await collectList(profileLinks)).filter((h) => h !== owner);
+    const handles = (await collectList(profileLinks, 'Abonnements')).filter((h) => h !== owner);
     return { status: 'ok', handles, expected };
   }
 

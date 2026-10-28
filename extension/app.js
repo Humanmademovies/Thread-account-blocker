@@ -117,6 +117,44 @@ function setStatus(el, text, kind = '') {
   el.className = `status ${kind}`.trim();
 }
 
+// --- Bandeau « Traitement en cours » : étape en cours, temps écoulé, compte à rebours des pauses ---
+
+let busyStart = 0;
+let busyTimer = null;
+let pauseUntil = 0; // fin de la pause en cours entre deux blocages (horodatage), 0 sinon
+const clock = (ms) => {
+  const s = Math.max(0, Math.round(ms / 1000));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+};
+function setStep(text) {
+  pauseUntil = 0;
+  $('busy-step').textContent = text;
+}
+function startPause(ms) {
+  pauseUntil = Date.now() + ms;
+  tick();
+}
+function tick() {
+  $('busy-time').textContent = clock(Date.now() - busyStart);
+  if (pauseUntil) {
+    $('busy-step').textContent = `Pause avant le compte suivant : encore ${Math.max(0, Math.ceil((pauseUntil - Date.now()) / 1000))} s`
+      + ' (les pauses limitent le risque de restriction du compte)';
+  }
+}
+function setBusy(on) {
+  $('busy').hidden = !on;
+  if (on && !busyTimer) {
+    busyStart = Date.now();
+    setStep('Démarrage…');
+    tick();
+    busyTimer = setInterval(tick, 1000);
+  } else if (!on && busyTimer) {
+    clearInterval(busyTimer);
+    busyTimer = null;
+    pauseUntil = 0;
+  }
+}
+
 const LABELS = {
   [STATUS.BLOCKED]: ['bloqué', 'ok'],
   [STATUS.ALREADY_BLOCKED]: ['déjà bloqué', 'ok'],
@@ -149,7 +187,7 @@ function refresh() {
   $('bar').value = done;
   $('picker').hidden = !total;
   for (const box of $('accounts').querySelectorAll('input')) box.disabled = !idle;
-  $('busy').hidden = idle;
+  setBusy(!idle);
   $('platform').disabled = !idle;
   $('platform-hint').hidden = platform().precheck;
   $('precheck').disabled = !idle || !platform().precheck;
@@ -274,7 +312,8 @@ $('read-following').addEventListener('click', async () => {
   running = true;
   refresh();
   progressEl = status;
-  setStatus(status, `Lecture des abonnements de @${handle} : un onglet Threads va passer au premier plan, n'y touchez pas...`);
+  setStatus(status, `Lecture des abonnements de @${handle} en cours, suivez l'avancement en haut de la page…`, 'working');
+  setStep(`Ouverture du profil @${handle} dans un onglet Threads (il passe au premier plan)…`);
   try {
     const result = await readInForeground(`${THREADS}/@${handle}`, 'readFollowing');
     if (result.status === STATUS.LOGIN_REQUIRED) {
@@ -369,6 +408,7 @@ const readCurrentBlocks = () => readInForeground(PRIVACY_URL, 'exportBlocked');
  */
 async function skipAlreadyBlocked(handles) {
   log('Lecture de vos profils bloqués dans les réglages Threads : un onglet passe au premier plan, n\'y touchez pas...');
+  setStep('Lecture de vos profils bloqués pour sauter ceux déjà bloqués : ouverture des réglages Threads…');
   let result;
   try {
     result = await readCurrentBlocks();
@@ -416,11 +456,18 @@ $('start').addEventListener('click', async () => {
     refresh();
     return;
   }
+  let attempt = 0;
   const summary = await runBlocks({
     handles,
     results: results(),
-    block: blockOne,
-    sleep,
+    block: (handle) => {
+      setStep(`${name} : blocage de @${handle} (${++attempt} sur ${planned} au maximum)…`);
+      return blockOne(handle);
+    },
+    sleep: (ms, signal) => {
+      startPause(ms);
+      return sleep(ms, signal);
+    },
     delay: [settings.min, settings.max],
     limit: settings.limit,
     signal: controller.signal,
@@ -466,7 +513,9 @@ $('reset').addEventListener('click', async () => {
 // Progression des lectures de listes : affichée sous le bouton qui l'a lancée.
 let progressEl = null;
 chrome.runtime.onMessage.addListener((msg) => {
-  if (msg?.type === 'blockedex:progress' && progressEl) setStatus(progressEl, `${msg.count} comptes trouvés...`);
+  if (msg?.type !== 'blockedex:progress' || !running) return;
+  if (msg.step) setStep(msg.step);
+  if (progressEl && msg.count) setStatus(progressEl, `En cours : ${msg.count} comptes trouvés…`, 'working');
 });
 
 function download(filename, text) {
@@ -482,7 +531,8 @@ $('export-btn').addEventListener('click', async () => {
   const status = $('export-status');
   running = true; // verrouille les autres boutons pendant l'export
   refresh();
-  setStatus(status, 'Ouverture des réglages Threads : un onglet va passer au premier plan, n\'y touchez pas jusqu\'à la fin...');
+  setStatus(status, 'Export en cours, suivez l\'avancement en haut de la page…', 'working');
+  setStep('Ouverture des réglages Threads dans un onglet (il passe au premier plan)…');
   progressEl = status;
   try {
     const result = await readCurrentBlocks();

@@ -10,14 +10,18 @@
   <main>
     <header>
       <h1>blockedex</h1>
-      <p class="lead">Importez, appliquez et exportez des listes de blocage sur Threads, depuis votre Chrome déjà connecté.</p>
+      <p class="lead">Importez, appliquez et exportez des listes de blocage sur Threads et Instagram, depuis votre Chrome déjà connecté.</p>
     </header>
 
-    <div id="busy" class="busy" role="alert" hidden>
-      <strong>Traitement en cours : ne touchez à rien.</strong>
-      Laissez cette page ouverte et ne cliquez pas dans l'onglet Threads ou Instagram qui s'ouvre
-      (même s'il passe au premier plan) jusqu'à la fin. Utiliser cet onglet ou la souris dessus fait
-      échouer l'opération.
+    <div id="busy" class="busy" hidden>
+      <div class="busy-head">
+        <span class="spinner" aria-hidden="true"></span>
+        <strong>Traitement en cours : ne touchez à rien.</strong>
+        <span id="busy-time" class="busy-time" title="Temps écoulé">0:00</span>
+      </div>
+      <p id="busy-step" class="busy-step" role="status" aria-live="polite">Démarrage…</p>
+      <p class="busy-hint">Laissez cette page ouverte et ne cliquez pas dans l'onglet Threads ou Instagram
+        qui s'ouvre (même s'il passe au premier plan) jusqu'à la fin : l'utiliser fait échouer l'opération.</p>
     </div>
 
     <section id="import">

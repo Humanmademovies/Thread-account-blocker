@@ -53,7 +53,17 @@ label.check { display: flex; align-items: center; gap: 8px; margin-top: 12px; fo
 label.check input { margin: 0; accent-color: var(--accent); }
 label.check + .hint { margin-top: 8px; }
 .busy { position: sticky; top: 8px; z-index: 10; margin-bottom: 16px; padding: 12px 14px; border: 1px solid var(--warn); border-radius: 12px; background: var(--card); color: var(--text); font-size: 14px; box-shadow: 0 4px 16px rgb(0 0 0 / 0.15); }
-.busy strong { display: block; margin-bottom: 2px; color: var(--warn); }
+.busy-head { display: flex; align-items: center; gap: 10px; }
+.busy-head strong { flex: 1; color: var(--warn); }
+.busy-time { font: 600 13px ui-monospace, Menlo, Consolas, monospace; color: var(--muted); }
+.busy-step { margin: 8px 0 4px; font-weight: 600; }
+.busy-hint { margin: 0; color: var(--muted); font-size: 12.5px; }
+/* Indicateur d'activité : tourne tant qu'une opération est en cours. */
+.spinner { flex: none; width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--warn); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.4s; } }
+.status.working { display: flex; align-items: center; gap: 8px; }
+.status.working::before { content: ""; flex: none; width: 12px; height: 12px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
 #picker { margin-top: 12px; }
 .platform-row { margin: 0 0 8px; }
 .platform-row label { display: grid; gap: 4px; min-width: 180px; }
