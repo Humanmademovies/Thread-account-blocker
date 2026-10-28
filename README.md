@@ -1,6 +1,6 @@
 # La Blocklist
 
-**Une extension Chrome pour ignorer les comptes de votre liste sur Threads et Instagram : leurs
+**Une extension Chrome et Firefox pour ignorer les comptes de votre liste sur Threads et Instagram : leurs
 publications restent dans votre fil, mais vous ne les voyez plus et ne pouvez plus interagir avec.**
 
 ## Pourquoi ignorer plutôt que bloquer ?
@@ -64,6 +64,21 @@ Cliquez sur l'icône La Blocklist : la page de l'outil s'ouvre.
 
 > Au démarrage, Chrome peut afficher un avertissement sur les « extensions en mode développeur » :
 > c'est normal pour une extension installée de cette façon.
+
+### Sous Firefox (version 140 ou plus récente)
+
+Le même zip fonctionne dans Firefox. Mais Firefox n'installe durablement que les extensions signées
+par Mozilla :
+
+- **Pour essayer** : tapez `about:debugging#/runtime/this-firefox`, cliquez sur **Charger un module
+  complémentaire temporaire…** et choisissez le fichier `manifest.json` du dossier décompressé.
+  L'extension disparaît à la fermeture de Firefox : il faut la recharger à chaque fois.
+- **Pour l'installer durablement** : il faut un fichier `.xpi` signé par Mozilla (voir « Pour les
+  développeurs »). Ouvrez-le dans Firefox et acceptez l'installation.
+
+Ensuite, épinglez La Blocklist depuis le menu des extensions (icône puzzle 🧩), connectez-vous sur
+instagram.com et/ou threads.com dans ce Firefox, puis cliquez sur l'icône. Si Firefox demande
+l'accès à threads.com et instagram.com, accordez-le : sans lui, l'extension ne peut rien faire.
 
 ## 2. Utiliser
 
@@ -258,10 +273,26 @@ Le code de l'extension est dans [`extension/`](extension/) (Manifest V3, sans d�
 ```bash
 node --test extension/tests/lib.test.mjs   # logique pure
 node extension/tests/e2e.mjs               # extension chargée dans Chromium face à un faux Threads local
+node extension/tests/e2e-firefox.mjs       # la même chose, en plus court, dans Firefox
 ```
 
-Le test de bout en bout a besoin du paquet npm `playwright`, de son Chromium et d'`openssl`. Il
-vérifie la mécanique, pas les libellés du vrai Threads.
+Les deux tests de bout en bout partagent le faux Threads de `tests/fake-threads.mjs` et ont besoin
+d'`openssl`. Celui de Chromium demande le paquet npm `playwright` et son Chromium. Celui de Firefox
+n'a pas de dépendance : il pilote Firefox 140+ en WebDriver BiDi (`FIREFOX=/chemin/firefox` pour
+choisir le binaire). Ils vérifient la mécanique, pas les libellés du vrai Threads.
+
+Le même dossier sert aux deux navigateurs : `background.scripts` est utilisé par Firefox et ignoré
+par Chrome, qui prend `background.service_worker`. `browser_specific_settings.gecko` donne à Firefox
+l'identifiant de l'extension, sa version minimale (140, pour `world: 'MAIN'` et la déclaration de
+collecte de données, ici « aucune ») et ne gêne pas Chrome.
+
+Pour signer une version Firefox (un compte addons.mozilla.org et ses clés d'API sont nécessaires ;
+`--channel unlisted` donne un `.xpi` à distribuer soi-même, sans fiche sur le site de Mozilla) :
+
+```bash
+npx web-ext lint --source-dir extension --ignore-files 'tests/**'
+npx web-ext sign --source-dir extension --ignore-files 'tests/**' --channel unlisted --api-key … --api-secret …
+```
 
 Pour créer le zip d'une release :
 
