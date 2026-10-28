@@ -1,8 +1,9 @@
 # La Blocklist
 
-**Une extension Chrome pour bloquer d'un coup une liste de comptes Threads ou Instagram, et pour
-sauvegarder ou partager vos propres blocages.**
+**Une extension Chrome pour ignorer (ou bloquer) une liste de comptes Threads et Instagram.**
 
+- **Masquer sans bloquer** (par défaut) : les publications des comptes de votre liste restent dans
+  votre fil mais sont recouvertes d'un emoji. Vous les voyez passer sans les lire ni interagir.
 - **Liste de départ** : en un clic, ajoutez la liste « On bloque l'extrême droite » publiée sur
   [onbloquelextremedroite.fr](https://www.onbloquelextremedroite.fr/liste), tenue à jour chaque jour.
 - **Exporter** : récupère la liste de tous les comptes que vous avez bloqués, dans un fichier.
@@ -120,10 +121,27 @@ La liste lue remplace la liste à traiter : relisez-la et décochez ceux que vou
 > 1 235 annoncés). L'extension l'indique quand la lecture est partielle. Un compte privé que vous ne
 > suivez pas ne peut pas être lu.
 
+### Masquer sans bloquer (recommandé)
+
+Bloquer n'est pas toujours le meilleur choix : un compte bloqué ne vous est plus montré du tout. La
+Blocklist propose donc d'abord de **les ignorer** : dans **2. Ignorer ou bloquer les comptes cochés**,
+l'option **Masquer leurs publications, sans les bloquer** est cochée par défaut.
+
+Sur threads.com et instagram.com, chaque publication, réponse ou commentaire d'un compte coché reste à
+sa place et à sa taille dans votre fil, mais il est recouvert d'un emoji qui apparaît en sautillant
+(🫧 🙈 🌸 🍿 ✨…) avec la mention « @pseudo · masqué par La Blocklist ». Le cache empêche aussi de
+cliquer dessus : pas d'ouverture, pas de « J'aime », pas de réponse par erreur. Pour le réseau, la
+publication vous a été montrée et vous ne vous y êtes pas intéressé.
+
+- Rien n'est envoyé à Threads ni à Instagram, et personne n'est bloqué.
+- L'effet est immédiat : décochez un compte et ses publications réapparaissent, décochez l'option et
+  tout redevient normal.
+- Cela fonctionne avec la liste de départ comme avec votre propre liste.
+
 ### Choisir les comptes
 
-Sous **2. Appliquer les blocages**, chaque compte de la liste apparaît avec une case, **toutes
-cochées** au départ. Décochez ceux que vous ne voulez pas bloquer :
+Sous **2. Ignorer ou bloquer les comptes cochés**, chaque compte de la liste apparaît avec une case,
+**toutes cochées** au départ. Décochez ceux que vous voulez laisser tranquilles :
 
 - la **recherche** filtre la liste ;
 - **Tout cocher** / **Tout décocher** s'appliquent aux comptes affichés (pratique après une recherche).
