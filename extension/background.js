@@ -10,8 +10,9 @@ chrome.action.onClicked.addListener(async () => {
   }
 });
 
-// Bouton « Bloquer » des fils (inline.js) : le profil est ouvert dans un onglet en arrière-plan,
-// bloqué avec content.js, puis l'onglet est refermé. Un blocage à la fois, dans l'ordre des clics.
+// Bouton « Bloquer » des fils Threads et des publications Instagram (inline.js) : le profil est ouvert
+// dans un onglet en arrière-plan, bloqué avec content.js, puis l'onglet est refermé. Un blocage à la
+// fois, dans l'ordre des clics.
 const HANDLE_RE = /^[a-z0-9._]{1,30}$/;
 let queue = Promise.resolve();
 
@@ -22,14 +23,20 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return undefined;
   }
   queue = queue
-    .then(() => blockInBackground(msg.handle))
+    .then(() => blockInBackground(msg.handle, msg.platform))
     .catch((e) => ({ status: 'failed', detail: e.message }))
     .then((result) => sendResponse(result));
   return true; // réponse asynchrone
 });
 
-async function blockInBackground(handle) {
-  const tab = await chrome.tabs.create({ url: `https://www.threads.com/@${handle}`, active: false });
+const PROFILE_URLS = {
+  threads: (handle) => `https://www.threads.com/@${handle}`,
+  instagram: (handle) => `https://www.instagram.com/${handle}/`,
+};
+
+async function blockInBackground(handle, platform) {
+  const url = (PROFILE_URLS[platform] || PROFILE_URLS.threads)(handle);
+  const tab = await chrome.tabs.create({ url, active: false });
   try {
     await waitForLoad(tab.id);
     await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });

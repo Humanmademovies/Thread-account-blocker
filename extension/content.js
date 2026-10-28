@@ -4,12 +4,17 @@
 (() => {
   if (globalThis.__blockedex) return;
 
+  // Le même script sert sur Threads et sur Instagram ; seuls quelques repères changent.
+  const INSTAGRAM = /(^|\.)instagram\.com$/.test(location.hostname);
+
   const RE = {
     more: /^(more|plus)$/i,
+    // Bouton « … » de l'en-tête d'un profil Instagram.
+    options: /^(options|more options|plus d.options)$/i,
     block: /^(block|bloquer)$/i,
     unblock: /^(unblock|débloquer)$/i,
     login: /^(log in|se connecter)$/i,
-    notFound: /(this page isn.t available|page not found|but this page is|page is gone|cette page n.est pas disponible|page introuvable|mais cette page l.est|la page a disparu)/i,
+    notFound: /(this page isn.t available|page not found|but this page is|page is gone|cette page n.est (malheureusement )?pas disponible|page introuvable|mais cette page l.est|la page a disparu)/i,
     blockedRow: /(blocked profiles|profils bloqués)/i,
     // Compteur « 1,0 M followers » de l'en-tête de profil, qui ouvre la fenêtre des abonnés/abonnements.
     followersCount: /^\d[\d\s.,]*\s*[kKmM]?\s*(followers?|abonné\(e\)s|abonnés)$/i,
@@ -36,6 +41,10 @@
   // La navigation et l'en-tête de colonne ont aussi un bouton « Plus ». Le vrai Threads n'a pas de <main> :
   // on part du bouton d'action du profil (Suivre, Débloquer…) et on remonte jusqu'au premier « Plus ».
   const findMoreButton = () => {
+    if (INSTAGRAM) {
+      const header = document.querySelector('main header') || document.querySelector('header');
+      return (header && find(RE.options, header)) || null;
+    }
     const main = document.querySelector('main, [role="main"]');
     if (main) return find(RE.more, main) || null;
     for (let el = find(RE.profileAction); el && el !== document.body; el = el.parentElement) {
@@ -81,7 +90,8 @@
       check();
     });
 
-  const isLoginPage = () => location.pathname.startsWith('/login') || Boolean(find(RE.login));
+  const isLoginPage = () => location.pathname.startsWith('/login')
+    || location.pathname.startsWith('/accounts/login') || Boolean(find(RE.login));
 
   /** À appeler sur la page d'un profil : bloque le compte. */
   async function blockProfile() {
@@ -103,12 +113,15 @@
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
       return { status: 'already_blocked' };
     }
+    // Sur Instagram, le menu est lui-même une fenêtre qui contient « Bloquer » : ce n'est pas la confirmation.
+    const menuDialog = item.closest('[role="dialog"]');
     click(item);
 
     // D'autres fenêtres (aperçus de profil, notifications…) peuvent être ouvertes en même temps,
     // surtout si l'on utilise l'onglet : on ne suit que la fenêtre de confirmation elle-même.
     const confirm = await waitFor(() => {
       for (const dialog of document.querySelectorAll('[role="dialog"]')) {
+        if (dialog === menuDialog || dialog.contains(item)) continue;
         const button = find(RE.block, dialog);
         if (button) return button;
       }

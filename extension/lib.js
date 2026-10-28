@@ -14,7 +14,9 @@ export const isDone = (status) => FINAL.has(status);
 
 // Les comptes Threads reprennent les noms d'utilisateur Instagram.
 const HANDLE_RE = /^[a-z0-9._]{1,30}$/;
-const PROFILE_URL_RE = /^(?:https?:\/\/)?(?:www\.)?threads\.(?:net|com)\/@([^/?#\s]+)/i;
+const PROFILE_URL_RE = /^(?:https?:\/\/)?(?:www\.)?(?:threads\.(?:net|com)\/@|instagram\.com\/)([^/?#\s]+)/i;
+// Chemins d'Instagram qui ne sont pas des profils (instagram.com/p/…, /reel/…).
+const INSTAGRAM_PATHS = new Set(['p', 'reel', 'reels', 'explore', 'stories', 'accounts', 'direct', 'tv']);
 const HANDLE_KEYS = ['username', 'handle', 'user', 'screen_name', 'account', 'compte'];
 const CONTAINER_KEYS = ['accounts', 'users', 'blocked', 'handles', 'comptes'];
 
@@ -24,7 +26,10 @@ export class BlocklistError extends Error {}
 export function normalizeHandle(raw) {
   let value = String(raw).trim();
   const url = PROFILE_URL_RE.exec(value);
-  if (url) value = url[1];
+  if (url) {
+    if (/instagram/i.test(url[0]) && INSTAGRAM_PATHS.has(url[1].toLowerCase())) return null;
+    value = url[1];
+  }
   value = value.replace(/^@+/, '').toLowerCase();
   return HANDLE_RE.test(value) ? value : null;
 }
