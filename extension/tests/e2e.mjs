@@ -17,7 +17,21 @@ const { chromium } = require('playwright');
 const extensionPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 const NAV = '<nav><div role="button"><svg aria-label="More" width="16" height="16"></svg></div></nav>'; // leurre
-const profilePage = (handle, { unblock = false, noBlock = false } = {}) => `<!doctype html><body>${NAV}
+// Faux moteur réseau Relay de Threads (window.require), utilisé par le blocage via l'API (api.js).
+const FAKE_REQUIRE = `<script>
+window.require = (name) => ({
+  BarcelonaRelayEnvironment: { getNetwork: () => ({ execute: (params, variables) => ({ subscribe: (obs) => {
+    fetch('/__api?op=' + params.name + '&v=' + encodeURIComponent(JSON.stringify(variables)))
+      .then((r) => r.json())
+      .then((j) => { if (j.error) obs.error(new Error(j.error)); else { obs.next(j); obs.complete(); } });
+  } }) }) },
+  'BarcelonaUserDialogByUsernameQuery$Parameters': {
+    params: { id: '1', name: 'BarcelonaUserDialogByUsernameQuery', providedVariables: { pv: { get: () => true } } },
+  },
+}[name]);
+</script>`;
+const homePage = `<!doctype html><body>${NAV}<main><h1>Accueil</h1></main>${FAKE_REQUIRE}</body>`;
+const profilePage = (handle, { unblock = false, noBlock = false } = {}) => `<!doctype html><body>${NAV}${FAKE_REQUIRE}
 <main><h1>${handle}</h1><div role="button" id="more"><svg aria-label="More" width="16" height="16"></svg></div></main>
 <script>
 document.getElementById('more').onclick = () => {
@@ -57,11 +71,41 @@ document.querySelector('span').onclick = () => {
 };
 </script></body>`;
 
-const blocked = [];
+const visited = []; // pages chargées dans le faux Threads
+const blocked = []; // tous les blocages reçus par le faux Threads
+const apiBlocked = []; // ceux qui sont passés par l'API
+function fakeApi(url, res) {
+  const json = (body) => { res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(body)); };
+  const v = JSON.parse(url.searchParams.get('v'));
+  const op = url.searchParams.get('op');
+  if (/^BarcelonaBlockedListDialog/.test(op)) {
+    // « Profils bloqués », par pages de 20 ; le curseur est la position de départ.
+    const start = Number(v.after ?? 0);
+    const end = Math.min(start + 20, TOTAL_BLOCKED);
+    const edges = [];
+    for (let n = start; n < end; n++) edges.push({ node: { username: `User${String(n + 1).padStart(2, '0')}`, pk: String(n) } });
+    return json({ data: { results: { edges, page_info: { end_cursor: String(end), has_next_page: end < TOTAL_BLOCKED } } } });
+  }
+  if (op === 'BarcelonaUserDialogByUsernameQuery') {
+    // Comme le vrai Threads : null pour un compte inexistant et pour un compte déjà bloqué.
+    const hidden = ['ghost', 'already', 'needslogin'].includes(v.username);
+    return json({ data: { user: hidden ? null : { pk: `id_${v.username}`, username: v.username } } });
+  }
+  const h = v.user_id.replace(/^id_/, '');
+  if (h === 'broken') return json({ error: 'GraphQL operation responded with error: execution error' });
+  if (h === 'limited') return json({ error: 'Please wait a few minutes before you try again. (feedback_required)' });
+  blocked.push(h);
+  apiBlocked.push(h);
+  return json({ data: { record: { user: { friendship_status: { blocking: true }, id: v.user_id } } } });
+}
+
 function fakeThreads(req, res) {
   const url = new URL(req.url, 'https://www.threads.com');
   const html = (body) => { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }); res.end(body); };
   if (url.pathname === '/__block') { blocked.push(url.searchParams.get('h')); res.writeHead(204); return res.end(); }
+  if (url.pathname === '/__api') return fakeApi(url, res);
+  visited.push(url.pathname);
+  if (url.pathname === '/') return html(homePage);
   if (url.pathname === '/settings/privacy') return html(privacyPage);
   const m = /^\/@([^/]+)$/.exec(url.pathname);
   if (!m) return html(loginPage);
@@ -114,23 +158,27 @@ const results = {};
 let step = 0;
 const ok = (name) => console.log(`ok ${++step} - ${name}`);
 
-// 1. Import + application
+// 1. Import + application (API, avec repli sur l'interface)
 await app.fill('#paste', '@Alice\nghost\nalready\nbroken\nalice\nnot valid\nhttps://www.threads.com/@Bob');
 await app.click('#load');
 assert.match(await app.textContent('#parse-summary'), /5 comptes valides.*1 doublons.*1 entrées invalides/);
 ok('import : doublon et entrée invalide signalés');
 
+assert.equal(await app.isChecked('#api'), true);
 await setPause();
 await app.click('#start');
 await app.waitForFunction(() => document.querySelector('#log').textContent.includes('Terminé'), null, { timeout: 60000 });
 const log1 = await app.textContent('#log');
 assert.deepEqual(blocked.sort(), ['alice', 'bob']);
+assert.deepEqual(apiBlocked.sort(), ['alice', 'bob']);
 assert.match(log1, /@alice : bloqué/);
 assert.match(log1, /@ghost : introuvable/);
 assert.match(log1, /@already : déjà bloqué/);
 assert.match(log1, /@broken : échec/);
+assert.match(log1, /compte masqué \(déjà bloqué ou inexistant\) ; passage par l'interface/);
+assert.match(log1, /execution error ; passage par l'interface/);
 assert.match(await app.textContent('#counts'), /5 comptes dans la liste : 4 déjà traités, 1 à traiter/);
-ok('application : bloqué / introuvable / déjà bloqué / échec, avec le bon effet côté page');
+ok('application : bloqués via l\'API ; introuvable / déjà bloqué / échec tranchés par l\'interface en repli');
 
 // 2. Reprise : seul l'échec est retenté, rien de déjà fait n'est rebloqué
 blocked.length = 0;
@@ -144,6 +192,35 @@ await app.reload();
 assert.match(await app.textContent('#counts'), /5 comptes dans la liste : 4 déjà traités/);
 ok('persistance : liste et progression retrouvées après rechargement');
 
+// 3 bis. Limitation par Threads : arrêt net, sans repli sur l'interface
+blocked.length = 0;
+await app.click('#reset');
+await app.fill('#paste', 'q1\nlimited\nq2');
+await app.click('#load');
+await setPause();
+await app.click('#start');
+await app.waitForFunction(() => document.querySelector('#log').textContent.includes('Terminé'), null, { timeout: 60000 });
+assert.deepEqual(blocked, ['q1']);
+assert.match(await app.textContent('#log'), /limite les blocages sur votre compte/);
+assert.match(await app.textContent('#counts'), /3 comptes dans la liste : 1 déjà traités, 2 à traiter/);
+ok('limitation : arrêt immédiat, le compte limité et les suivants restent à traiter');
+
+// 3 ter. Comptes déjà dans « Profils bloqués » : ignorés sans visiter leur profil
+blocked.length = 0;
+visited.length = 0;
+await app.click('#reset');
+await app.fill('#paste', 'user01\n@User02\nfresh1');
+await app.click('#load');
+await setPause();
+await app.click('#start');
+await app.waitForFunction(() => document.querySelector('#log').textContent.includes('Terminé'), null, { timeout: 60000 });
+assert.deepEqual(blocked, ['fresh1']);
+assert.match(await app.textContent('#log'), /55 profils bloqués lus ; 2 comptes de la liste déjà bloqués, sautés/);
+assert.match(await app.textContent('#counts'), /3 comptes dans la liste : 3 déjà traités, 0 à traiter/);
+assert.ok(!visited.some((p) => /^\/@user0[12]$/i.test(p)), visited.join(' '));
+assert.ok(!visited.includes('/settings/privacy'), 'la liste doit être lue via l\'API, sans ouvrir les réglages');
+ok('déjà bloqués : « Profils bloqués » lu via l\'API (3 pages), comptes ni visités ni rebloqués');
+
 // 4. Session expirée : arrêt net, les suivants ne sont pas traités
 blocked.length = 0;
 await app.click('#reset');
@@ -156,18 +233,21 @@ assert.deepEqual(blocked, ['carol']);
 assert.match(await app.textContent('#log'), /session Threads absente ou expirée/);
 ok('session expirée : arrêt immédiat, les comptes suivants ne sont pas touchés');
 
-// 5. Plafond par session
+// 5. Plafond par session, API désactivée : tout passe par l'interface
 blocked.length = 0;
+apiBlocked.length = 0;
 await app.click('#reset');
 await app.fill('#paste', 'p1\np2\np3\np4');
 await app.click('#load');
 await app.fill('#limit', '2');
+await app.uncheck('#api');
 await setPause();
 await app.click('#start');
 await app.waitForFunction(() => document.querySelector('#log').textContent.includes('Terminé'), null, { timeout: 60000 });
 assert.deepEqual(blocked, ['p1', 'p2']);
+assert.deepEqual(apiBlocked, []);
 assert.match(await app.textContent('#counts'), /2 à traiter/);
-ok('plafond : 2 comptes traités, 2 restants');
+ok('plafond (API désactivée) : 2 comptes traités par l\'interface, 2 restants');
 
 // 6. Export : défilement jusqu'au bout, liens de posts ignorés, fichier relisible
 const [download] = await Promise.all([app.waitForEvent('download'), app.click('#export-btn')]);
@@ -177,7 +257,7 @@ assert.equal(lines.length, TOTAL_BLOCKED);
 assert.equal(lines[0], '@user01');
 assert.equal(lines.at(-1), `@user${TOTAL_BLOCKED}`);
 assert.equal(new Set(lines).size, TOTAL_BLOCKED);
-assert.match(download.suggestedFilename(), /^blockedex-bloques-\d{4}-\d{2}-\d{2}\.txt$/);
+assert.match(download.suggestedFilename(), /^la-blocklist-bloques-\d{4}-\d{2}-\d{2}\.txt$/);
 ok(`export : ${TOTAL_BLOCKED} comptes récupérés par défilement, sans doublons ni liens de posts`);
 
 // 7. Aller-retour : le fichier exporté est ré-importable

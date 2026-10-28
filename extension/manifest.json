@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "La Blocklist",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Masquez (ou bloquez) sur Threads et Instagram les comptes de la liste « On bloque l'extrême droite » ou de vos propres listes.",
   "permissions": ["storage", "scripting", "alarms"],
   "host_permissions": [
