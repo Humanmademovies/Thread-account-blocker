@@ -41,10 +41,9 @@
     return null;
   };
   // Un profil déjà bloqué affiche directement un bouton « Débloquer », hors de toute fenêtre.
-  const profileIsBlocked = () => {
-    const button = find(RE.unblock);
-    return Boolean(button && !button.closest('[role="dialog"],[role="menu"]'));
-  };
+  const profileIsBlocked = () =>
+    [...document.querySelectorAll('[role="button"],button')].some((el) =>
+      isVisible(el) && RE.unblock.test(labelOf(el)) && !el.closest('[role="dialog"],[role="menu"]'));
   const click = (el) => el.click();
   const fail = (detail) => ({ status: 'failed', detail });
   const handleFromHref = (href) => {
@@ -102,14 +101,22 @@
     }
     click(item);
 
+    // D'autres fenêtres (aperçus de profil, notifications…) peuvent être ouvertes en même temps,
+    // surtout si l'on utilise l'onglet : on ne suit que la fenêtre de confirmation elle-même.
     const confirm = await waitFor(() => {
-      const dialog = document.querySelector('[role="dialog"]');
-      return dialog && find(RE.block, dialog);
+      for (const dialog of document.querySelectorAll('[role="dialog"]')) {
+        const button = find(RE.block, dialog);
+        if (button) return button;
+      }
+      return null;
     });
     if (!confirm) return fail('confirmation introuvable');
+    const confirmDialog = confirm.closest('[role="dialog"]');
     click(confirm);
-    const closed = await waitFor(() => !document.querySelector('[role="dialog"]'));
-    return closed ? { status: 'blocked' } : fail('la confirmation ne s\'est pas fermée');
+    // Le blocage est acquis dès que le profil affiche « Débloquer », ou que la confirmation a disparu.
+    const done = await waitFor(() =>
+      profileIsBlocked() || !confirmDialog.isConnected || !isVisible(confirmDialog), 15000);
+    return done ? { status: 'blocked' } : fail('la confirmation ne s\'est pas fermée');
   }
 
   const findRowByText = (re) =>
