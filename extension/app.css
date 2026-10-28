@@ -47,6 +47,9 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 button.quiet { border-color: transparent; color: var(--muted); }
 button:disabled { opacity: 0.45; cursor: not-allowed; }
 button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+label.check { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 13px; color: var(--muted); cursor: pointer; }
+label.check input { margin: 0; accent-color: var(--accent); }
+label.check + .hint { margin-top: 8px; }
 #picker { margin-top: 12px; }
 .picker-tools { margin-top: 0; }
 .picker-tools input[type="search"] { flex: 1 1 200px; padding: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: inherit; font: inherit; }
