@@ -5,6 +5,7 @@ partager vos propres blocages.**
 
 - **Exporter** : récupère la liste de tous les comptes que vous avez bloqués, dans un fichier.
 - **Importer** : charge une liste de comptes (la vôtre, ou celle qu'un ami vous a envoyée).
+- **Partir d'un compte** : prend la liste des comptes que suit un compte Threads comme liste à bloquer.
 - **Choisir** : vous cochez ou décochez chaque compte avant de lancer.
 - **Bloquer** : l'extension bloque les comptes cochés, un par un, sur **votre** compte Threads.
 
@@ -57,6 +58,19 @@ Formats acceptés :
   (`https://www.threads.com/@pseudo`). Une ligne qui commence par `#` est ignorée.
 - `.csv` : une colonne `username` (ou `handle`, `user`, `account`…), sinon la première colonne.
 - `.json` : une liste de pseudos, ou d'objets `{"username": "..."}`.
+
+### Partir des abonnements d'un compte
+
+Toujours dans **1. Importer une liste**, saisissez un pseudo (ou un lien de profil) et cliquez sur
+**Lire ses abonnements**. Un onglet Threads passe au premier plan, ouvre la liste des comptes que ce
+compte suit (*Suivi(e)s*) et la fait défiler. Comptez environ 4 minutes pour 800 comptes.
+
+La liste lue remplace la liste à traiter : relisez-la et décochez ceux que vous ne voulez pas bloquer
+(un ami, un média…). **Télécharger les cochés** l'enregistre dans un fichier pour la partager.
+
+> Threads n'affiche pas toujours toute la liste d'un autre compte (lors des essais : 828 comptes sur
+> 1 235 annoncés). L'extension l'indique quand la lecture est partielle. Un compte privé que vous ne
+> suivez pas ne peut pas être lu.
 
 ### Choisir les comptes
 

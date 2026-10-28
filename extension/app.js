@@ -1,4 +1,4 @@
-import { STATUS, isDone, parseBlocklists, runBlocks, writeBlocklist, BlocklistError } from './lib.js';
+import { STATUS, isDone, normalizeHandle, parseBlocklists, runBlocks, writeBlocklist, BlocklistError } from './lib.js';
 
 const THREADS = 'https://www.threads.com';
 const PRIVACY_URL = `${THREADS}/settings/privacy`;
@@ -131,6 +131,8 @@ function refresh() {
   $('picker').hidden = !total;
   for (const box of $('accounts').querySelectorAll('input')) box.disabled = !idle;
   $('precheck').disabled = !idle;
+  $('read-following').disabled = !idle;
+  $('download-list').disabled = !selected.length;
   $('check-all').disabled = !idle;
   $('uncheck-all').disabled = !idle;
 }
@@ -201,6 +203,12 @@ $('accounts').addEventListener('change', (e) => {
 });
 $('filter').addEventListener('input', applyFilter);
 $('check-all').addEventListener('click', () => setExcluded(visibleHandles(), false));
+$('download-list').addEventListener('click', () => {
+  const handles = selectedList();
+  const day = new Date().toISOString().slice(0, 10);
+  download(`blockedex-liste-${day}.txt`,
+    `# Liste blockedex du ${day} (${handles.length} ${handles.length === 1 ? 'compte' : 'comptes'})\n` + handles.map((h) => `@${h}\n`).join(''));
+});
 $('uncheck-all').addEventListener('click', () => setExcluded(visibleHandles(), true));
 
 function readSettings() {
@@ -214,6 +222,65 @@ function readSettings() {
 }
 
 // --- Import ---
+
+/** Remplace la liste à traiter (tous les comptes cochés) et réaffiche la liste à cocher. */
+async function useList(handles) {
+  store.list = handles;
+  store.excluded = [];
+  await persist();
+  $('filter').value = '';
+  renderChecklist();
+  refresh();
+}
+
+/** « 501 », « 1,2 k », « 1.0M » → nombre approximatif, ou null. */
+function parseCount(text) {
+  const m = /^(\d[\d\s.,]*?)\s*([kKmM])?$/.exec(String(text || '').trim());
+  if (!m) return null;
+  const n = Number(m[1].replace(/\s/g, '').replace(',', '.'));
+  if (!Number.isFinite(n)) return null;
+  return Math.round(n * ({ k: 1e3, m: 1e6 }[(m[2] || '').toLowerCase()] || 1));
+}
+
+$('read-following').addEventListener('click', async () => {
+  const status = $('source-status');
+  const handle = normalizeHandle($('source-handle').value);
+  if (!handle) return setStatus(status, 'Indiquez un pseudo (@pseudo) ou un lien de profil valide.', 'err');
+  running = true;
+  refresh();
+  progressEl = status;
+  setStatus(status, `Lecture des abonnements de @${handle} (un onglet Threads va passer au premier plan)...`);
+  try {
+    const result = await readInForeground(`${THREADS}/@${handle}`, 'readFollowing');
+    if (result.status === STATUS.LOGIN_REQUIRED) {
+      setStatus(status, 'Session Threads absente ou expirée : connectez-vous sur threads.com puis réessayez.', 'err');
+    } else if (result.status === STATUS.NOT_FOUND) {
+      setStatus(status, `Le compte @${handle} est introuvable.`, 'err');
+    } else if (result.status !== 'ok') {
+      setStatus(status, `Échec : ${result.detail}.`, 'err');
+    } else if (!result.handles.length) {
+      setStatus(status, `Aucun abonnement lu pour @${handle} : la liste actuelle n'a pas été remplacée.`, 'warn');
+    } else {
+      await useList(result.handles);
+      setStatus($('parse-summary'), '');
+      const expected = parseCount(result.expected);
+      // Threads n'affiche parfois qu'une partie de la liste (constaté : ~300 sur 501).
+      const partial = expected && result.handles.length < expected * 0.95;
+      setStatus(status,
+        `${result.handles.length} comptes lus parmi les abonnements de @${handle}`
+        + (result.expected ? ` (Threads en annonce ${result.expected})` : '') + '. '
+        + (partial ? 'Threads n\'a affiché qu\'une partie de la liste. ' : '')
+        + 'Relisez-la ci-dessous et décochez ceux à ne pas bloquer.',
+        partial ? 'warn' : 'ok');
+    }
+  } catch (e) {
+    setStatus(status, `Échec : ${e.message}`, 'err');
+  } finally {
+    progressEl = null;
+    running = false;
+    refresh();
+  }
+});
 
 $('load').addEventListener('click', async () => {
   const sources = [];
@@ -229,11 +296,8 @@ $('load').addEventListener('click', async () => {
     throw e;
   }
   if (!parsed.handles.length) return setStatus(summary, 'Aucun compte valide trouvé.', 'err');
-  store.list = parsed.handles;
-  store.excluded = [];
-  await persist();
-  $('filter').value = '';
-  renderChecklist();
+  await useList(parsed.handles);
+  setStatus($('source-status'), '');
   const extra = [];
   if (parsed.duplicates) extra.push(`${parsed.duplicates} doublons ignorés`);
   if (parsed.invalid.length) extra.push(`${parsed.invalid.length} entrées invalides (ex. ${JSON.stringify(parsed.invalid[0])})`);
@@ -262,15 +326,16 @@ async function blockOne(handle) {
  * Lit la liste « Profils bloqués » de Threads (au premier plan : la liste ne se charge pas dans un
  * onglet masqué), puis rend la main à la page blockedex.
  */
-async function readCurrentBlocks() {
+async function readInForeground(url, method) {
   const appTab = await chrome.tabs.getCurrent();
   try {
-    const tabId = await openInWorkTab(PRIVACY_URL, { active: true });
-    return await callInPage(tabId, 'exportBlocked');
+    const tabId = await openInWorkTab(url, { active: true });
+    return await callInPage(tabId, method);
   } finally {
     if (appTab) await chrome.tabs.update(appTab.id, { active: true }).catch(() => {});
   }
 }
+const readCurrentBlocks = () => readInForeground(PRIVACY_URL, 'exportBlocked');
 
 /**
  * Marque « déjà bloqué » les comptes cochés présents dans vos profils bloqués, pour ne pas visiter
@@ -361,8 +426,10 @@ $('reset').addEventListener('click', async () => {
 
 // --- Export ---
 
+// Progression des lectures de listes : affichée sous le bouton qui l'a lancée.
+let progressEl = null;
 chrome.runtime.onMessage.addListener((msg) => {
-  if (msg?.type === 'blockedex:progress') setStatus($('export-status'), `${msg.count} comptes trouvés...`);
+  if (msg?.type === 'blockedex:progress' && progressEl) setStatus(progressEl, `${msg.count} comptes trouvés...`);
 });
 
 function download(filename, text) {
@@ -379,6 +446,7 @@ $('export-btn').addEventListener('click', async () => {
   running = true; // verrouille les autres boutons pendant l'export
   refresh();
   setStatus(status, 'Ouverture des réglages Threads (un onglet va passer au premier plan)...');
+  progressEl = status;
   try {
     const result = await readCurrentBlocks();
     if (result.status === STATUS.LOGIN_REQUIRED) {
@@ -395,6 +463,7 @@ $('export-btn').addEventListener('click', async () => {
   } catch (e) {
     setStatus(status, `Échec : ${e.message}`, 'err');
   } finally {
+    progressEl = null;
     running = false;
     refresh();
   }

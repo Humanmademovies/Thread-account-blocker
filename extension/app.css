@@ -37,7 +37,9 @@ section { background: var(--card); border: 1px solid var(--border); border-radiu
 .status.warn { color: var(--warn); }
 .status.err { color: var(--err); }
 code { background: var(--bg); padding: 1px 5px; border-radius: 4px; font-size: 13px; }
-textarea, input[type="number"], select { width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: inherit; font: inherit; }
+.from-account { margin-top: 16px; }
+#source-handle { flex: 1 1 220px; width: auto; }
+textarea, input[type="number"], input[type="text"], select { width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: inherit; font: inherit; }
 textarea { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; resize: vertical; }
 .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; margin-top: 12px; }
 .settings label { flex: 1 1 140px; display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
