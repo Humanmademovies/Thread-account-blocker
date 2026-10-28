@@ -3,6 +3,12 @@
 blockedex importe une ou plusieurs listes de comptes et les bloque sur **votre** compte Threads, et
 peut aussi exporter vos blocages actuels.
 
+Deux versions, même fonctionnement :
+
+- **Extension Chrome** (`extension/`) : la plus simple à partager et à utiliser, dans votre Chrome déjà
+  connecté. Voir [extension/README.md](extension/README.md).
+- **Ligne de commande Python** (`blockedex/`) : décrite ci-dessous, pour automatiser depuis un terminal.
+
 ## Pourquoi Chrome ?
 
 L'API officielle de Threads ne propose pas de blocage. L'outil pilote donc l'interface web dans
