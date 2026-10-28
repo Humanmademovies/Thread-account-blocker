@@ -1,6 +1,7 @@
-# blockedex
+# La Blocklist
 
-Extension Chrome pour bloquer d'un coup une liste de comptes Threads, et exporter vos propres blocages.
+Extension Chrome pour bloquer d'un coup une liste de comptes Threads ou Instagram, à commencer par la
+liste de départ « On bloque l'extrême droite », et pour exporter vos propres blocages.
 
 ## Installer
 
@@ -8,15 +9,15 @@ Extension Chrome pour bloquer d'un coup une liste de comptes Threads, et exporte
 2. En haut à droite, activez **Mode développeur**.
 3. Cliquez sur **Charger l'extension non empaquetée** et choisissez **ce dossier** (celui qui
    contient ce fichier). Ne le supprimez pas ensuite : Chrome lit l'extension ici.
-4. Épinglez blockedex avec l'icône puzzle 🧩, connectez-vous sur threads.com, puis cliquez sur
-   l'icône blockedex.
+4. Épinglez La Blocklist avec l'icône puzzle 🧩, connectez-vous sur Instagram et/ou Threads, puis
+   cliquez sur l'icône La Blocklist.
 
 ## Utiliser
 
-1. **Importer** : choisissez le fichier de comptes, puis **Charger la liste**.
-2. **Choisir** : décochez les comptes à ne pas bloquer.
-3. **Bloquer** : gardez les pauses par défaut, cliquez sur **Démarrer**, laissez la page ouverte.
-4. **Exporter** : télécharge la liste de vos comptes bloqués, à partager.
+1. **Ajouter la liste de départ**, ou importer votre propre fichier de comptes.
+2. **Choisir** : décochez les comptes à ne pas bloquer, puis choisissez le réseau (Instagram ou Threads).
+3. **Bloquer** : gardez les pauses par défaut, cliquez sur **Démarrer**, et ne touchez à rien jusqu'à la fin.
+4. **Exporter** : télécharge la liste de vos comptes bloqués sur Threads, à partager.
 
 Guide complet, conseils et problèmes fréquents :
 https://github.com/axel17460-hash/Thread-account-blocker#readme

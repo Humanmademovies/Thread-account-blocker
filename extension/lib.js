@@ -1,4 +1,4 @@
-// Logique pure de blockedex (aucun accès à Chrome ni au DOM) : testable avec Node.
+// Logique pure de La Blocklist (aucun accès à Chrome ni au DOM) : testable avec Node.
 
 export const STATUS = {
   BLOCKED: 'blocked',
@@ -122,6 +122,65 @@ export function parseBlocklists(sources) {
     }
   }
   return { handles, invalid, duplicates };
+}
+
+// --- Liste de départ : la liste publiée sur onbloquelextremedroite.fr ---
+
+export const STARTER = {
+  name: '« On bloque l’extrême droite »',
+  author: 'MISE AU POING',
+  url: 'https://www.onbloquelextremedroite.fr/liste',
+  platform: 'instagram',
+};
+
+const decodeEntities = (text) => text
+  .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
+  .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)))
+  .replace(/&(amp|lt|gt|quot|apos|rsquo|nbsp);/g, (_, e) =>
+    ({ amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", rsquo: '’', nbsp: ' ' })[e]);
+
+/**
+ * Lit la page de la liste de départ (HTML brut, sans DOM : utilisable dans le service worker).
+ * Chaque compte est un <article class="account"> avec .name et .handle, rangé dans une
+ * <section aria-label="catégorie">. Renvoie [{ handle, name, category }] sans doublons.
+ */
+export function parseStarterList(html) {
+  const start = html.indexOf('DIRECTORY:START');
+  const end = html.indexOf('DIRECTORY:END');
+  const body = start >= 0 ? html.slice(start, end > start ? end : undefined) : html;
+  const accounts = [];
+  const seen = new Set();
+  const addFrom = (chunk, category) => {
+    for (const [, article] of chunk.matchAll(/<article[^>]*class="account\b[^"]*"[^>]*>([\s\S]*?)<\/article>/g)) {
+      const raw = (/class="handle"[^>]*>\s*@?([^<\s]+)/.exec(article) || /instagram\.com\/([^/"?#]+)/.exec(article) || [])[1];
+      const handle = raw && normalizeHandle(raw);
+      if (!handle || seen.has(handle)) continue;
+      seen.add(handle);
+      const name = decodeEntities((/class="name"[^>]*>([^<]*)</.exec(article) || [])[1] || '').trim();
+      accounts.push({ handle, name, category });
+    }
+  };
+  const sections = [...body.matchAll(/<section[^>]*aria-label="([^"]*)"[^>]*>([\s\S]*?)<\/section>/g)];
+  if (sections.length) for (const [, label, chunk] of sections) addFrom(chunk, decodeEntities(label));
+  else addFrom(body, '');
+  return accounts;
+}
+
+/**
+ * Applique une nouvelle version de la liste de départ à la liste de l'utilisateur : ajoute les comptes
+ * apparus, retire ceux que le site a retirés (seulement s'ils venaient de la liste de départ). Les
+ * comptes ajoutés par ailleurs ne sont jamais touchés.
+ */
+export function applyStarterUpdate(list, previousStarter, nextStarter) {
+  const before = new Set(previousStarter);
+  const after = new Set(nextStarter);
+  const removed = previousStarter.filter((h) => !after.has(h));
+  const removedSet = new Set(removed);
+  const kept = list.filter((h) => !removedSet.has(h));
+  const present = new Set(kept);
+  const added = nextStarter.filter((h) => !before.has(h));
+  const appended = nextStarter.filter((h) => !present.has(h));
+  return { list: [...kept, ...appended], added, removed };
 }
 
 /** Sérialise une liste (format 'txt', 'csv' ou 'json') ; relisible par parseBlocklists. */

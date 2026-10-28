@@ -64,6 +64,16 @@ label.check + .hint { margin-top: 8px; }
 @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.4s; } }
 .status.working { display: flex; align-items: center; gap: 8px; }
 .status.working::before { content: ""; flex: none; width: 12px; height: 12px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+.starter { margin: 4px 0 18px; padding: 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); }
+.starter-head { display: flex; flex-wrap: wrap; gap: 12px; align-items: start; justify-content: space-between; }
+.starter-head > div { flex: 1 1 280px; }
+.starter-title { margin: 0 0 4px; font-weight: 700; }
+.starter a { color: var(--accent); }
+.starter .hint { margin-bottom: 0; }
+.starter .check { margin-top: 10px; }
+.starter-tools { margin-top: 6px; }
+.starter-tools:not(:has(:not([hidden]))) { display: none; }
+#accounts .who { color: var(--muted); font: 12px system-ui, sans-serif; }
 #picker { margin-top: 12px; }
 .platform-row { margin: 0 0 8px; }
 .platform-row label { display: grid; gap: 4px; min-width: 180px; }

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
-  BlocklistError, STATUS, normalizeHandle, parseBlocklists, runBlocks, writeBlocklist,
+  BlocklistError, STATUS, applyStarterUpdate, normalizeHandle, parseBlocklists, parseStarterList, runBlocks, writeBlocklist,
 } from '../lib.js';
 
 const parse = (name, text) => parseBlocklists([{ name, text }]);
@@ -146,4 +146,44 @@ test('runBlocks : le signal d\'arrêt est respecté', async () => {
   assert.deepEqual(h.calls, ['a']);
   assert.match(s.aborted, /arrêté/);
   assert.equal(s.remaining, 2);
+});
+
+// --- Liste de départ ---
+
+const STARTER_HTML = `<header><a href="https://www.instagram.com/mise__au__poing/">Nous suivre</a></header>
+<div id="results"><!-- DIRECTORY:START -->
+<section aria-label="Personnalités"><div class="section-head"><h2>Personnalités</h2></div><div class="accounts">
+<article class="account "><div class="account-identity"><div><p class="name">Jean D&#39;Arc</p><div class="handle">@Jean.Darc</div></div></div>
+<div class="actions"><a class="open" href="https://www.instagram.com/jean.darc/">Instagram ↗</a></div></article>
+<article class="account "><p class="name">Média &amp; Co</p><div class="handle">@media_co</div><a href="https://www.instagram.com/media_co/">↗</a></article>
+</div></section>
+<section aria-label="La fachosphère"><div class="accounts">
+<article class="account "><p class="name">Sans arobase</p><div class="handle">sans_arobase</div></article>
+<article class="account "><p class="name">Doublon</p><div class="handle">@media_co</div></article>
+</div></section>
+<!-- DIRECTORY:END --></div>
+<footer><a href="https://www.instagram.com/mise__au__poing/">Instagram</a></footer>`;
+
+test('parseStarterList lit les comptes, leurs noms et catégories, sans les liens du site', () => {
+  assert.deepEqual(parseStarterList(STARTER_HTML), [
+    { handle: 'jean.darc', name: "Jean D'Arc", category: 'Personnalités' },
+    { handle: 'media_co', name: 'Média & Co', category: 'Personnalités' },
+    { handle: 'sans_arobase', name: 'Sans arobase', category: 'La fachosphère' },
+  ]);
+});
+
+test('parseStarterList renvoie une liste vide si la page ne contient plus de comptes', () => {
+  assert.deepEqual(parseStarterList('<html><body>Maintenance</body></html>'), []);
+});
+
+test('applyStarterUpdate ajoute les nouveaux comptes et retire seulement ceux venus de la liste de départ', () => {
+  const list = ['mine1', 'a', 'b', 'mine2'];
+  const r = applyStarterUpdate(list, ['a', 'b'], ['b', 'c', 'mine1']);
+  assert.deepEqual(r.list, ['mine1', 'b', 'mine2', 'c']); // a retiré, c ajouté, mine1 déjà présent
+  assert.deepEqual(r.added, ['c', 'mine1']);
+  assert.deepEqual(r.removed, ['a']);
+});
+
+test('applyStarterUpdate sur une liste vide = la liste de départ', () => {
+  assert.deepEqual(applyStarterUpdate([], [], ['x', 'y']).list, ['x', 'y']);
 });
