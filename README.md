@@ -74,7 +74,8 @@ Vos choix sont gardés, même si vous fermez la page.
    100 comptes par session.
 2. Cliquez sur **Démarrer** et confirmez.
 3. Un onglet Threads s'ouvre en arrière-plan et passe d'un profil à l'autre. **Laissez la page
-   blockedex ouverte** pendant ce temps.
+   blockedex ouverte et ne touchez pas à cet onglet Threads** tant que le traitement n'est pas
+   terminé : y cliquer ou y naviguer peut faire échouer des blocages.
 
 Chaque compte affiche son résultat :
 
@@ -110,7 +111,11 @@ dans `chrome://extensions` cliquez sur la flèche ↻ de la carte blockedex.
 - **« Session Threads absente ou expirée »** : connectez-vous sur threads.com dans ce Chrome, puis relancez.
 - **L'extension a disparu** : le dossier a été déplacé ou supprimé. Remettez-le, puis rechargez-la
   depuis `chrome://extensions`.
-- **Beaucoup d'« échec »** : Threads a peut-être changé son interface. Arrêtez et signalez-le.
+- **Des « échec »** : vérifiez que vous n'avez pas utilisé l'onglet Threads de travail pendant le
+  traitement, puis relancez **Démarrer** : les comptes en échec sont retentés, et ceux qui avaient
+  en fait été bloqués s'affichent « déjà bloqué ».
+- **Beaucoup d'« échec » sans toucher à l'onglet** : Threads a peut-être changé son interface.
+  Arrêtez et signalez-le.
 
 ---
 
