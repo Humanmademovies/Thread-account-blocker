@@ -22,6 +22,12 @@
         <button id="load" class="primary">Charger la liste</button>
       </div>
       <p id="parse-summary" class="status" role="status"></p>
+      <p class="hint from-account">Ou partez des comptes que suit un compte Threads (par exemple un compte qui suit surtout des profils à bloquer) :</p>
+      <div class="row">
+        <input type="text" id="source-handle" placeholder="@pseudo ou lien de profil" spellcheck="false">
+        <button id="read-following">Lire ses abonnements</button>
+      </div>
+      <p id="source-status" class="status" role="status"></p>
     </section>
 
     <section id="apply">
@@ -33,6 +39,7 @@
           <input type="search" id="filter" placeholder="Rechercher un compte" spellcheck="false">
           <button id="check-all">Tout cocher</button>
           <button id="uncheck-all">Tout décocher</button>
+          <button id="download-list" title="Enregistre les comptes cochés dans un fichier .txt, à partager">Télécharger les cochés</button>
         </div>
         <ul id="accounts"></ul>
       </div>

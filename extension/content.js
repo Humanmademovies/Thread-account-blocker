@@ -11,6 +11,9 @@
     login: /^(log in|se connecter)$/i,
     notFound: /(this page isn.t available|page not found|but this page is|page is gone|cette page n.est pas disponible|page introuvable|mais cette page l.est|la page a disparu)/i,
     blockedRow: /(blocked profiles|profils bloqués)/i,
+    // Compteur « 1,0 M followers » de l'en-tête de profil, qui ouvre la fenêtre des abonnés/abonnements.
+    followersCount: /^\d[\d\s.,]*\s*[kKmM]?\s*(followers?|abonné\(e\)s|abonnés)$/i,
+    followingTab: /^(following|suivi\(e\)s|abonnements)/i,
     // Gros bouton d'action de l'en-tête de profil, qui sert de repère pour trouver son bouton « Plus ».
     profileAction: /^(follow|follow back|following|requested|unblock|suivre|suivre en retour|suivi\(e\)|abonné\(e\)|demande envoyée|débloquer)$/i,
   };
@@ -151,32 +154,26 @@
     }
   };
 
-  /** À appeler sur la page des réglages de confidentialité : lit la liste « Profils bloqués ». */
-  async function exportBlocked() {
-    const state = await waitFor(() => (isLoginPage() ? 'login' : findRowByText(RE.blockedRow)), 20000);
-    if (state === 'login') return { status: 'login_required' };
-    if (!state) return fail('« Profils bloqués » introuvable dans les réglages');
-    click(state);
+  // Threads ouvre d'abord une fenêtre vide puis la remplace par celle qui contient la liste :
+  // on ne garde donc pas l'élément, on reprend la fenêtre visible à chaque lecture.
+  const currentDialog = () => [...document.querySelectorAll('[role="dialog"]')].filter(isVisible).pop() || null;
+  const profileLinks = (dialog) =>
+    [...dialog.querySelectorAll('a[href^="/@"]')].map((a) => handleFromHref(a.getAttribute('href'))).filter(Boolean);
 
-    // Threads ouvre d'abord une fenêtre vide puis la remplace par celle qui contient la liste :
-    // on ne garde donc pas l'élément, on reprend la fenêtre visible à chaque lecture.
-    const currentDialog = () => [...document.querySelectorAll('[role="dialog"]')].find(isVisible) || null;
-    if (!await waitFor(currentDialog)) return fail('la liste des profils bloqués ne s\'est pas ouverte');
-
-    const read = () => {
+  /**
+   * Fait défiler la liste de la fenêtre ouverte jusqu'au bout et renvoie les comptes lus.
+   * `read(dialog)` extrait les pseudos affichés ; on s'arrête après 3 passages sans nouveau compte.
+   */
+  async function collectList(read) {
+    const readNow = () => {
       const dialog = currentDialog();
-      if (!dialog) return [];
-      return [
-        ...[...dialog.querySelectorAll('a[href^="/@"]')].map((a) => handleFromHref(a.getAttribute('href'))),
-        ...unblockButtons(dialog).map((b) => handleFromRow(rowOf(b, dialog))),
-      ].filter(Boolean);
+      return dialog ? read(dialog) : [];
     };
     const found = new Set();
     let idle = 0;
-    // On défile jusqu'à 3 passages de suite sans nouveau compte.
     for (let round = 0; round < 2000 && idle < 3; round++) {
       const before = found.size;
-      read().forEach((h) => found.add(h));
+      readNow().forEach((h) => found.add(h));
       if (found.size === before) idle++;
       else {
         idle = 0;
@@ -184,10 +181,64 @@
       }
       const dialog = currentDialog();
       if (dialog) scrollListToEnd(dialog);
-      await waitFor(() => read().some((h) => !found.has(h)), 4000);
+      await waitFor(() => readNow().some((h) => !found.has(h)), 4000);
     }
-    return { status: 'ok', handles: [...found] };
+    return [...found];
   }
 
-  globalThis.__blockedex = { blockProfile, exportBlocked };
+  /** À appeler sur la page des réglages de confidentialité : lit la liste « Profils bloqués ». */
+  async function exportBlocked() {
+    const state = await waitFor(() => (isLoginPage() ? 'login' : findRowByText(RE.blockedRow)), 20000);
+    if (state === 'login') return { status: 'login_required' };
+    if (!state) return fail('« Profils bloqués » introuvable dans les réglages');
+    click(state);
+    if (!await waitFor(currentDialog)) return fail('la liste des profils bloqués ne s\'est pas ouverte');
+
+    const handles = await collectList((dialog) => [
+      ...profileLinks(dialog),
+      ...unblockButtons(dialog).map((b) => handleFromRow(rowOf(b, dialog))),
+    ].filter(Boolean));
+    return { status: 'ok', handles };
+  }
+
+  /**
+   * À appeler sur la page d'un profil : lit la liste des comptes qu'il suit (onglet « Suivi(e)s »
+   * de la fenêtre des abonnés). Threads n'affiche pas toujours toute la liste : `expected` est le
+   * nombre qu'il annonce, pour signaler une lecture partielle.
+   */
+  async function readFollowing() {
+    const owner = handleFromHref(location.pathname);
+    const state = await waitFor(() => {
+      if (isLoginPage()) return 'login';
+      if (RE.notFound.test(document.body.innerText)) return 'not_found';
+      return find(RE.followersCount) ? 'ready' : null;
+    }, 20000);
+    if (state === 'login') return { status: 'login_required' };
+    if (state === 'not_found') return { status: 'not_found' };
+    if (state !== 'ready') return fail('compteur d\'abonnés introuvable sur le profil');
+    click(find(RE.followersCount));
+
+    const tabOf = () => {
+      const dialog = currentDialog();
+      return dialog && [...dialog.querySelectorAll('[role="tab"]')].find((t) => RE.followingTab.test(t.textContent.trim()));
+    };
+    const tab = await waitFor(tabOf);
+    if (!tab) return fail('onglet des abonnements introuvable (compte privé ?)');
+    const expected = (/(\d[\d\s.,]*\s*[kKmM]?)$/.exec(tab.textContent.trim()) || [])[1] || null;
+    if (tab.getAttribute('aria-selected') !== 'true') {
+      // L'onglet lui-même ne réagit pas au clic : c'est le bouton qu'il contient.
+      const followers = new Set(profileLinks(currentDialog()));
+      click(tab.querySelector('[role="button"]') || tab);
+      if (!await waitFor(() => tabOf()?.getAttribute('aria-selected') === 'true')) {
+        return fail('impossible d\'ouvrir l\'onglet des abonnements');
+      }
+      // Attendre que la liste des abonnés soit remplacée, pour ne pas les mélanger.
+      await waitFor(() => profileLinks(currentDialog()).some((h) => !followers.has(h)), 6000);
+    }
+
+    const handles = (await collectList(profileLinks)).filter((h) => h !== owner);
+    return { status: 'ok', handles, expected };
+  }
+
+  globalThis.__blockedex = { blockProfile, exportBlocked, readFollowing };
 })();
