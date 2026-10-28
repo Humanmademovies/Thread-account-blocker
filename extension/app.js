@@ -27,6 +27,7 @@ const PLATFORMS = {
 // `starter` : état de la liste de départ, mis à jour aussi par background.js (voir refreshStarter).
 const DEFAULTS = {
   list: [], results: {}, resultsInstagram: {}, excluded: [], starter: {},
+  ignore: { enabled: true }, // masquer les publications des comptes cochés (inline.js), sans bloquer
   settings: { platform: 'threads', min: 8, max: 20, limit: 100, precheck: true },
 };
 let store = structuredClone(DEFAULTS);
@@ -204,6 +205,7 @@ function refresh() {
   $('bar').max = Math.max(selected.length, 1);
   $('bar').value = done;
   $('picker').hidden = !total;
+  renderIgnore();
   for (const box of $('accounts').querySelectorAll('input')) box.disabled = !idle;
   setBusy(!idle);
   $('platform').disabled = !idle;
@@ -589,6 +591,21 @@ $('export-btn').addEventListener('click', async () => {
   }
 });
 
+// --- Masquer sans bloquer (le masquage lui-même est fait par inline.js dans les onglets) ---
+
+function renderIgnore() {
+  const count = selectedList().length;
+  setStatus($('ignore-status'), !store.ignore.enabled ? 'Masquage désactivé.'
+    : count ? `Actif : ${count} ${count === 1 ? 'compte masqué' : 'comptes masqués'} sur Threads et Instagram.`
+      : 'Actif, mais aucun compte coché pour l\'instant.', store.ignore.enabled && count ? 'ok' : '');
+}
+
+$('ignore-on').addEventListener('change', async () => {
+  store.ignore = { ...store.ignore, enabled: $('ignore-on').checked };
+  await persist();
+  renderIgnore();
+});
+
 // --- Liste de départ ---
 
 const dateTime = (ms) => new Date(ms).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
@@ -702,6 +719,8 @@ chrome.storage.onChanged.addListener((changes, area) => {
   $('max').value = store.settings.max;
   $('limit').value = store.settings.limit;
   $('precheck').checked = store.settings.precheck !== false; // absent des réglages des versions précédentes
+  $('ignore-on').checked = store.ignore.enabled !== false;
+  renderIgnore();
   renderChecklist();
   refresh();
   unseenShown = store.starter.unseen || 0;

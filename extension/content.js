@@ -82,7 +82,7 @@
     for (const type of BLOCKED_EVENTS) window.removeEventListener(type, swallow, { capture: true });
   }
   // Éléments ajoutés par La Blocklist (voile, boutons « Bloquer » d'inline.js) : à ignorer dans la page.
-  const isOurs = (el) => Boolean(el.closest(`#${OVERLAY_ID}, .blockedex-btn`));
+  const isOurs = (el) => Boolean(el.closest(`#${OVERLAY_ID}, .blockedex-btn, .lb-cover`));
 
   const find = (re, root = document) =>
     [...root.querySelectorAll('[role="button"],[role="menuitem"],button,a')]

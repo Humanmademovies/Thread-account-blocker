@@ -98,6 +98,106 @@
     }
   }
 
+  // --- Masquer sans bloquer ---
+  // Les publications des comptes cochés de votre liste restent à leur place et à leur taille : le réseau
+  // les compte comme affichées. Elles sont seulement recouvertes, pour que vous ne les lisiez pas et ne
+  // puissiez pas cliquer dessus (ni ouvrir, ni aimer, ni répondre). Rien n'est envoyé au réseau.
+  const EMOJIS = ['🫧', '🙈', '🌸', '🍿', '✨', '🦄', '🧸', '🌈', '🍭', '🎈'];
+  const COVER_EVENTS = ['click', 'dblclick', 'mousedown', 'mouseup', 'pointerdown', 'pointerup', 'contextmenu'];
+  let ignoreOn = false;
+  let ignored = new Set();
+
+  // Nom d'auteur d'une publication ou d'une réponse (pas une mention, pas un avatar, pas un menu).
+  const authorHandle = (link) => {
+    const m = HREF_RE.exec(link.getAttribute('href') || '');
+    if (!m || nameText(link) !== m[1] || NOT_PROFILES.has(m[1].toLowerCase())) return null;
+    return nearPostTime(link) || link.closest('article') ? m[1].toLowerCase() : null;
+  };
+  const authorCount = (root) => [...root.querySelectorAll('a[href^="/"]')].filter((a) => authorHandle(a)).length;
+  // La publication entière : <article> dans le fil Instagram ; sinon le plus grand bloc qui ne contient
+  // qu'un seul auteur (une publication ou une réponse d'un fil Threads, un commentaire Instagram).
+  const postOf = (link) => {
+    const article = PLATFORM === 'instagram' && link.closest('article');
+    if (article) return article;
+    let el = link;
+    while (el.parentElement && el.parentElement !== document.body && authorCount(el.parentElement) === 1) el = el.parentElement;
+    return el;
+  };
+  // Couleur de fond réelle derrière la publication, pour un cache opaque dans le thème de la page.
+  const backgroundOf = (el) => {
+    for (; el; el = el.parentElement) {
+      const bg = getComputedStyle(el).backgroundColor;
+      if (bg && !/rgba\(0, 0, 0, 0\)|transparent/.test(bg)) return bg;
+    }
+    return 'rgb(255, 255, 255)';
+  };
+  const isDark = (rgb) => {
+    const [r, g, b] = (rgb.match(/\d+/g) || [255, 255, 255]).map(Number);
+    return 0.299 * r + 0.587 * g + 0.114 * b < 128;
+  };
+
+  function cover(post, handle) {
+    if (post.querySelector(':scope > .lb-cover')) return;
+    if (getComputedStyle(post).position === 'static') {
+      post.style.position = 'relative';
+      post.dataset.lbPositioned = '';
+    }
+    post.dataset.lbIgnored = handle;
+    const bg = backgroundOf(post);
+    const el = document.createElement('div');
+    el.className = 'lb-cover';
+    el.style.background = bg;
+    el.style.color = isDark(bg) ? '#e8eaee' : '#15181e';
+    el.innerHTML = '<span class="lb-emoji" aria-hidden="true"></span><span class="lb-label"></span>';
+    el.querySelector('.lb-emoji').textContent = EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
+    el.querySelector('.lb-label').textContent = `@${handle} · masqué par La Blocklist`;
+    for (const type of COVER_EVENTS) {
+      el.addEventListener(type, (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+      });
+    }
+    post.append(el);
+  }
+
+  function uncover(post) {
+    post.querySelector(':scope > .lb-cover')?.remove();
+    if ('lbPositioned' in post.dataset) post.style.position = '';
+    delete post.dataset.lbPositioned;
+    delete post.dataset.lbIgnored;
+  }
+
+  function applyIgnore() {
+    // Retirer les caches devenus inutiles (compte décoché ou retiré, masquage désactivé).
+    for (const post of document.querySelectorAll('[data-lb-ignored]')) {
+      if (!ignoreOn || !ignored.has(post.dataset.lbIgnored)) uncover(post);
+    }
+    if (!ignoreOn || !ignored.size) return;
+    const own = ownHandle();
+    for (const link of document.querySelectorAll('a[href^="/"]')) {
+      const m = HREF_RE.exec(link.getAttribute('href') || '');
+      const quick = m && m[1].toLowerCase();
+      if (!quick || !ignored.has(quick) || quick === own) continue; // filtre rapide avant le test complet
+      const masked = link.closest('[data-lb-ignored]');
+      if (masked?.querySelector(':scope > .lb-cover')) continue;
+      const handle = authorHandle(link);
+      if (handle) cover(postOf(link), handle);
+    }
+  }
+
+  // Liste et réglage, lus dans le stockage de l'extension et suivis en direct.
+  async function loadIgnore() {
+    const { list = [], excluded = [], ignore = {} } = await chrome.storage.local.get(['list', 'excluded', 'ignore']);
+    const off = new Set(excluded);
+    ignored = new Set(list.filter((h) => !off.has(h)));
+    ignoreOn = ignore.enabled !== false; // activé par défaut
+    applyIgnore();
+  }
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === 'local' && (changes.list || changes.excluded || changes.ignore)) loadIgnore();
+  });
+  loadIgnore();
+
   // Threads charge les réponses au fil du défilement : on repasse après chaque changement de la page.
   let scheduled = false;
   new MutationObserver(() => {
@@ -106,6 +206,7 @@
     requestAnimationFrame(() => {
       scheduled = false;
       addButtons();
+      applyIgnore();
     });
   }).observe(document.documentElement, { childList: true, subtree: true });
   addButtons();
