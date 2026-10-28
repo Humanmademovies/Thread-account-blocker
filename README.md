@@ -73,7 +73,11 @@ Vos choix sont gardés, même si vous fermez la page.
 1. Laissez les pauses par défaut (8 à 20 secondes entre deux blocages) et le maximum de
    100 comptes par session.
 2. Cliquez sur **Démarrer** et confirmez.
-3. Un onglet Threads s'ouvre en arrière-plan et passe d'un profil à l'autre. **Laissez la page
+3. L'extension lit d'abord vos **profils bloqués** dans les réglages Threads (un onglet passe au
+   premier plan quelques secondes, environ 25 s pour 500 comptes) : les comptes de la liste que vous
+   bloquez déjà sont marqués « déjà bloqué » sans visiter leur profil. Pour une toute petite liste,
+   vous pouvez décocher l'option « Lire d'abord mes profils bloqués ».
+4. Un onglet Threads passe ensuite d'un profil à l'autre pour les comptes restants. **Laissez la page
    blockedex ouverte et ne touchez pas à cet onglet Threads** tant que le traitement n'est pas
    terminé : y cliquer ou y naviguer peut faire échouer des blocages.
 

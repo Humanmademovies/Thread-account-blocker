@@ -7,7 +7,8 @@ const $ = (id) => document.getElementById(id);
 // --- Stockage (chrome.storage.local) : liste, progression et réglages survivent à la fermeture ---
 
 // `excluded` : comptes décochés dans la liste, qui ne seront pas bloqués.
-const DEFAULTS = { list: [], results: {}, excluded: [], settings: { min: 8, max: 20, limit: 100 } };
+// `settings.precheck` : lire d'abord la liste « Profils bloqués » pour sauter les comptes déjà bloqués.
+const DEFAULTS = { list: [], results: {}, excluded: [], settings: { min: 8, max: 20, limit: 100, precheck: true } };
 let store = structuredClone(DEFAULTS);
 const persist = () => chrome.storage.local.set(store);
 
@@ -129,6 +130,7 @@ function refresh() {
   $('bar').value = done;
   $('picker').hidden = !total;
   for (const box of $('accounts').querySelectorAll('input')) box.disabled = !idle;
+  $('precheck').disabled = !idle;
   $('check-all').disabled = !idle;
   $('uncheck-all').disabled = !idle;
 }
@@ -206,7 +208,7 @@ function readSettings() {
     const value = $(id).value.trim() === '' ? NaN : Number($(id).value);
     return Number.isFinite(value) ? Math.max(0, value) : fallback; // 0 est une valeur valide
   };
-  const settings = { min: num('min', 8), max: num('max', 20), limit: num('limit', 100) };
+  const settings = { min: num('min', 8), max: num('max', 20), limit: num('limit', 100), precheck: $('precheck').checked };
   if (settings.min > settings.max) settings.max = settings.min;
   return settings;
 }
@@ -256,6 +258,56 @@ async function blockOne(handle) {
   }
 }
 
+/**
+ * Lit la liste « Profils bloqués » de Threads (au premier plan : la liste ne se charge pas dans un
+ * onglet masqué), puis rend la main à la page blockedex.
+ */
+async function readCurrentBlocks() {
+  const appTab = await chrome.tabs.getCurrent();
+  try {
+    const tabId = await openInWorkTab(PRIVACY_URL, { active: true });
+    return await callInPage(tabId, 'exportBlocked');
+  } finally {
+    if (appTab) await chrome.tabs.update(appTab.id, { active: true }).catch(() => {});
+  }
+}
+
+/**
+ * Marque « déjà bloqué » les comptes cochés présents dans vos profils bloqués, pour ne pas visiter
+ * leur profil. Si la liste est illisible, chaque profil sera vérifié comme avant. Renvoie false
+ * s'il faut s'arrêter (session expirée).
+ */
+async function skipAlreadyBlocked(handles) {
+  log('Lecture de vos profils bloqués dans les réglages Threads (un onglet passe au premier plan)...');
+  let result;
+  try {
+    result = await readCurrentBlocks();
+  } catch (e) {
+    log(`Lecture impossible (${e.message}) : chaque profil sera vérifié.`, 'warn');
+    return true;
+  }
+  if (result.status === STATUS.LOGIN_REQUIRED) {
+    log('Arrêt : session Threads absente ou expirée : connectez-vous sur threads.com', 'warn');
+    return false;
+  }
+  if (result.status !== 'ok') {
+    log(`Lecture impossible (${result.detail}) : chaque profil sera vérifié.`, 'warn');
+    return true;
+  }
+  const blocked = new Set(result.handles);
+  let skipped = 0;
+  for (const h of handles) {
+    if (isDone(store.results[h]) || !blocked.has(h)) continue;
+    store.results[h] = STATUS.ALREADY_BLOCKED;
+    setTag(items.get(h), h);
+    skipped++;
+  }
+  await persist();
+  refresh();
+  log(`${result.handles.length} profils bloqués lus ; ${skipped} comptes de la liste déjà bloqués, sautés.`, 'ok');
+  return true;
+}
+
 $('start').addEventListener('click', async () => {
   const settings = readSettings();
   store.settings = settings;
@@ -268,6 +320,11 @@ $('start').addEventListener('click', async () => {
   controller = new AbortController();
   refresh();
   log(`Démarrage : ${planned} comptes prévus.`);
+  if (settings.precheck && !await skipAlreadyBlocked(handles)) {
+    running = false;
+    refresh();
+    return;
+  }
   const summary = await runBlocks({
     handles,
     results: store.results,
@@ -323,8 +380,7 @@ $('export-btn').addEventListener('click', async () => {
   refresh();
   setStatus(status, 'Ouverture des réglages Threads (un onglet va passer au premier plan)...');
   try {
-    const tabId = await openInWorkTab(PRIVACY_URL, { active: true });
-    const result = await callInPage(tabId, 'exportBlocked');
+    const result = await readCurrentBlocks();
     if (result.status === STATUS.LOGIN_REQUIRED) {
       setStatus(status, 'Session Threads absente ou expirée : connectez-vous sur threads.com puis réessayez.', 'err');
     } else if (result.status !== 'ok') {
@@ -351,6 +407,7 @@ $('export-btn').addEventListener('click', async () => {
   $('min').value = store.settings.min;
   $('max').value = store.settings.max;
   $('limit').value = store.settings.limit;
+  $('precheck').checked = store.settings.precheck !== false; // absent des réglages des versions précédentes
   renderChecklist();
   refresh();
 })();
