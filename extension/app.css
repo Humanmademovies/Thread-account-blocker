@@ -53,6 +53,9 @@ label.check { display: flex; align-items: center; gap: 8px; margin-top: 12px; fo
 label.check input { margin: 0; accent-color: var(--accent); }
 label.check + .hint { margin-top: 8px; }
 #picker { margin-top: 12px; }
+.platform-row { margin: 0 0 8px; }
+.platform-row label { display: grid; gap: 4px; min-width: 180px; }
+#platform-hint { margin-top: 4px; }
 .picker-tools { margin-top: 0; }
 .picker-tools input[type="search"] { flex: 1 1 200px; padding: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: inherit; font: inherit; }
 #accounts { list-style: none; margin: 8px 0 0; padding: 0; max-height: 320px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; }

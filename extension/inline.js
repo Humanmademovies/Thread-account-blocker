@@ -1,11 +1,16 @@
-// Script chargé sur threads.com : ajoute un petit bouton « Bloquer » à côté du nom de chaque auteur
-// dans les fils (publications et réponses). Le blocage lui-même est fait par background.js, dans un
-// onglet en arrière-plan : la page en cours n'est pas touchée.
+// Script chargé sur threads.com et instagram.com : ajoute un petit bouton « Bloquer » à côté du nom de
+// chaque auteur (publications, réponses, commentaires). Le blocage lui-même est fait par background.js,
+// dans un onglet en arrière-plan : la page en cours n'est pas touchée.
 (() => {
   if (globalThis.__blockedexInline) return;
   globalThis.__blockedexInline = true;
 
-  const HREF_RE = /^\/@([A-Za-z0-9._]+)\/?$/;
+  const PLATFORM = /(^|\.)instagram\.com$/.test(location.hostname) ? 'instagram' : 'threads';
+  // Liens de profil : /@pseudo sur Threads, /pseudo/ sur Instagram.
+  const HREF_RE = PLATFORM === 'instagram' ? /^\/([A-Za-z0-9._]{1,30})\/$/ : /^\/@([A-Za-z0-9._]+)\/?$/;
+  const NOT_PROFILES = new Set(['p', 'reel', 'reels', 'explore', 'stories', 'accounts', 'direct', 'tv']);
+  // Instagram ajoute « Vérifié » (texte de l'icône) au nom des comptes certifiés.
+  const nameText = (link) => link.textContent.trim().replace(/(vérifié|verified)$/i, '').trim();
   const LABELS = {
     idle: 'Bloquer',
     pending: 'Blocage…',
@@ -31,8 +36,8 @@
 
   // Votre propre compte : lien « Profil » du menu de gauche. Pas de bouton à côté de vous-même.
   const ownHandle = () => {
-    const link = [...document.querySelectorAll('a[href^="/@"]')]
-      .find((a) => /^(profil|profile)/i.test(a.textContent.trim()));
+    const link = [...document.querySelectorAll('a[href^="/"]')]
+      .find((a) => /^(profil|profile)/i.test(a.textContent.trim()) && HREF_RE.test(a.getAttribute('href')));
     const m = link && HREF_RE.exec(link.getAttribute('href'));
     return m ? m[1].toLowerCase() : null;
   };
@@ -61,7 +66,7 @@
     update(handle);
     let result;
     try {
-      result = await chrome.runtime.sendMessage({ type: 'blockedex:block', handle });
+      result = await chrome.runtime.sendMessage({ type: 'blockedex:block', handle, platform: PLATFORM });
     } catch {
       result = null; // extension rechargée pendant que la page était ouverte
     }
@@ -71,12 +76,12 @@
 
   function addButtons() {
     const own = ownHandle();
-    for (const link of document.querySelectorAll('a[href^="/@"]')) {
+    for (const link of document.querySelectorAll('a[href^="/"]')) {
       if (buttons.get(link)?.isConnected) continue;
       const m = HREF_RE.exec(link.getAttribute('href') || '');
-      if (!m || link.textContent.trim() !== m[1]) continue; // avatar ou mention, pas un nom d'auteur
+      if (!m || nameText(link) !== m[1]) continue; // avatar ou mention, pas un nom d'auteur
       const handle = m[1].toLowerCase();
-      if (handle === own || !nearPostTime(link)) continue;
+      if (handle === own || NOT_PROFILES.has(handle) || !nearPostTime(link)) continue;
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'blockedex-btn';

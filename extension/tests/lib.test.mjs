@@ -10,6 +10,14 @@ test('normalizeHandle accepte pseudos et URLs de profil', () => {
   assert.equal(normalizeHandle('@Foo.Bar_1'), 'foo.bar_1');
   assert.equal(normalizeHandle('https://www.threads.net/@someone?hl=fr'), 'someone');
   assert.equal(normalizeHandle('threads.com/@Someone/post/abc'), 'someone');
+  assert.equal(normalizeHandle('https://www.instagram.com/Some.One/'), 'some.one');
+  assert.equal(normalizeHandle('instagram.com/someone?igsh=abc'), 'someone');
+});
+
+test('normalizeHandle refuse les liens Instagram qui ne sont pas des profils', () => {
+  for (const raw of ['https://www.instagram.com/p/Cxyz/', 'instagram.com/reel/abc', 'https://www.instagram.com/explore/']) {
+    assert.equal(normalizeHandle(raw), null, raw);
+  }
 });
 
 test('normalizeHandle rejette les entrées invalides', () => {

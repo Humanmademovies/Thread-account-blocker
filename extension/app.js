@@ -6,11 +6,30 @@ const $ = (id) => document.getElementById(id);
 
 // --- Stockage (chrome.storage.local) : liste, progression et réglages survivent à la fermeture ---
 
+// Réseaux pris en charge, chacun avec sa progression. Instagram limite davantage l'automatisation :
+// pauses plus longues et plafond plus bas par défaut. La lecture préalable des profils bloqués
+// n'existe que pour Threads.
+const PLATFORMS = {
+  threads: {
+    name: 'Threads', profileUrl: (h) => `${THREADS}/@${h}`, results: 'results', precheck: true,
+    defaults: { min: 8, max: 20, limit: 100 },
+  },
+  instagram: {
+    name: 'Instagram', profileUrl: (h) => `https://www.instagram.com/${h}/`, results: 'resultsInstagram', precheck: false,
+    defaults: { min: 30, max: 60, limit: 30 },
+  },
+};
+
 // `excluded` : comptes décochés dans la liste, qui ne seront pas bloqués.
 // `settings.precheck` : lire d'abord la liste « Profils bloqués » pour sauter les comptes déjà bloqués.
-const DEFAULTS = { list: [], results: {}, excluded: [], settings: { min: 8, max: 20, limit: 100, precheck: true } };
+const DEFAULTS = {
+  list: [], results: {}, resultsInstagram: {}, excluded: [],
+  settings: { platform: 'threads', min: 8, max: 20, limit: 100, precheck: true },
+};
 let store = structuredClone(DEFAULTS);
 const persist = () => chrome.storage.local.set(store);
+const platform = () => PLATFORMS[store.settings.platform] || PLATFORMS.threads;
+const results = () => store[platform().results]; // progression du réseau choisi
 
 // --- Pauses : dans un worker, car les minuteries d'un onglet masqué sont ralenties par Chrome ---
 
@@ -113,7 +132,7 @@ const selectedList = () => {
 function refresh() {
   const total = store.list.length;
   const selected = selectedList();
-  const done = selected.filter((h) => isDone(store.results[h])).length;
+  const done = selected.filter((h) => isDone(results()[h])).length;
   const off = total - selected.length;
   const idle = !running;
   $('counts').textContent = total
@@ -122,7 +141,7 @@ function refresh() {
     : 'Aucune liste chargée.';
   $('start').disabled = !idle || selected.length === done;
   $('stop').disabled = idle;
-  $('reset').disabled = !idle || !Object.keys(store.results).length;
+  $('reset').disabled = !idle || !Object.keys(results()).length;
   $('load').disabled = !idle;
   $('export-btn').disabled = !idle;
   $('bar').hidden = !selected.length;
@@ -130,7 +149,9 @@ function refresh() {
   $('bar').value = done;
   $('picker').hidden = !total;
   for (const box of $('accounts').querySelectorAll('input')) box.disabled = !idle;
-  $('precheck').disabled = !idle;
+  $('platform').disabled = !idle;
+  $('platform-hint').hidden = platform().precheck;
+  $('precheck').disabled = !idle || !platform().precheck;
   $('read-following').disabled = !idle;
   $('download-list').disabled = !selected.length;
   $('check-all').disabled = !idle;
@@ -143,7 +164,7 @@ const items = new Map(); // handle -> <li>
 
 function setTag(li, handle) {
   const tag = li.querySelector('.tag');
-  const label = LABELS[store.results[handle]];
+  const label = LABELS[results()[handle]];
   tag.textContent = label ? label[0] : '';
   tag.className = `tag ${label ? label[1] : ''}`.trim();
 }
@@ -216,7 +237,10 @@ function readSettings() {
     const value = $(id).value.trim() === '' ? NaN : Number($(id).value);
     return Number.isFinite(value) ? Math.max(0, value) : fallback; // 0 est une valeur valide
   };
-  const settings = { min: num('min', 8), max: num('max', 20), limit: num('limit', 100), precheck: $('precheck').checked };
+  const settings = {
+    platform: $('platform').value,
+    min: num('min', 8), max: num('max', 20), limit: num('limit', 100), precheck: $('precheck').checked,
+  };
   if (settings.min > settings.max) settings.max = settings.min;
   return settings;
 }
@@ -312,7 +336,7 @@ let controller = null;
 
 async function blockOne(handle) {
   try {
-    const tabId = await openInWorkTab(`${THREADS}/@${handle}`);
+    const tabId = await openInWorkTab(platform().profileUrl(handle));
     const result = await callInPage(tabId, 'blockProfile');
     if (result.status === STATUS.FAILED && result.detail) log(`  détail : ${result.detail}`, 'err');
     return result.status;
@@ -362,8 +386,8 @@ async function skipAlreadyBlocked(handles) {
   const blocked = new Set(result.handles);
   let skipped = 0;
   for (const h of handles) {
-    if (isDone(store.results[h]) || !blocked.has(h)) continue;
-    store.results[h] = STATUS.ALREADY_BLOCKED;
+    if (isDone(results()[h]) || !blocked.has(h)) continue;
+    results()[h] = STATUS.ALREADY_BLOCKED;
     setTag(items.get(h), h);
     skipped++;
   }
@@ -377,22 +401,23 @@ $('start').addEventListener('click', async () => {
   const settings = readSettings();
   store.settings = settings;
   const handles = selectedList();
-  const todo = handles.filter((h) => !isDone(store.results[h])).length;
+  const todo = handles.filter((h) => !isDone(results()[h])).length;
   const planned = settings.limit ? Math.min(todo, settings.limit) : todo;
-  if (!confirm(`Bloquer jusqu'à ${planned} comptes sur Threads avec votre compte connecté ?`)) return;
+  const { name } = platform();
+  if (!confirm(`Bloquer jusqu'à ${planned} comptes sur ${name} avec votre compte connecté ?`)) return;
 
   running = true;
   controller = new AbortController();
   refresh();
-  log(`Démarrage : ${planned} comptes prévus.`);
-  if (settings.precheck && !await skipAlreadyBlocked(handles)) {
+  log(`Démarrage sur ${name} : ${planned} comptes prévus.`);
+  if (settings.precheck && platform().precheck && !await skipAlreadyBlocked(handles)) {
     running = false;
     refresh();
     return;
   }
   const summary = await runBlocks({
     handles,
-    results: store.results,
+    results: results(),
     block: blockOne,
     sleep,
     delay: [settings.min, settings.max],
@@ -415,9 +440,20 @@ $('start').addEventListener('click', async () => {
 
 $('stop').addEventListener('click', () => controller?.abort());
 
+// Changer de réseau : chacun garde sa progression ; on reprend ses pauses et son plafond conseillés.
+$('platform').addEventListener('change', async () => {
+  store.settings = { ...readSettings(), ...PLATFORMS[$('platform').value].defaults };
+  $('min').value = store.settings.min;
+  $('max').value = store.settings.max;
+  $('limit').value = store.settings.limit;
+  await persist();
+  for (const [handle, li] of items) setTag(li, handle);
+  refresh();
+});
+
 $('reset').addEventListener('click', async () => {
-  if (!confirm('Effacer la progression ? Les comptes de la liste seront retraités.')) return;
-  store.results = {};
+  if (!confirm(`Effacer la progression sur ${platform().name} ? Les comptes de la liste seront retraités.`)) return;
+  store[platform().results] = {};
   await persist();
   for (const [handle, li] of items) setTag(li, handle);
   logEl.replaceChildren();
@@ -473,6 +509,7 @@ $('export-btn').addEventListener('click', async () => {
 
 (async () => {
   store = { ...structuredClone(DEFAULTS), ...(await chrome.storage.local.get(Object.keys(DEFAULTS))) };
+  $('platform').value = PLATFORMS[store.settings.platform] ? store.settings.platform : 'threads';
   $('min').value = store.settings.min;
   $('max').value = store.settings.max;
   $('limit').value = store.settings.limit;

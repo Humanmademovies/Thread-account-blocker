@@ -1,17 +1,23 @@
 # blockedex
 
-**Une extension Chrome pour bloquer d'un coup une liste de comptes Threads, et pour sauvegarder ou
-partager vos propres blocages.**
+**Une extension Chrome pour bloquer d'un coup une liste de comptes Threads ou Instagram, et pour
+sauvegarder ou partager vos propres blocages.**
 
 - **Exporter** : récupère la liste de tous les comptes que vous avez bloqués, dans un fichier.
 - **Importer** : charge une liste de comptes (la vôtre, ou celle qu'un ami vous a envoyée).
 - **Partir d'un compte** : prend la liste des comptes que suit un compte Threads comme liste à bloquer.
-- **Bloquer depuis un fil** : un petit bouton « Bloquer » à côté de chaque auteur, directement sur threads.com.
+- **Bloquer depuis un fil** : un petit bouton « Bloquer » à côté de chaque auteur, directement sur
+  threads.com et instagram.com.
 - **Choisir** : vous cochez ou décochez chaque compte avant de lancer.
-- **Bloquer** : l'extension bloque les comptes cochés, un par un, sur **votre** compte Threads.
+- **Bloquer** : l'extension bloque les comptes cochés, un par un, sur **votre** compte Threads ou
+  Instagram (au choix).
 
 Pas de compte à créer, pas de mot de passe demandé, rien n'est envoyé à un serveur : tout se passe
-dans votre Chrome, où vous êtes déjà connecté à Threads.
+dans votre Chrome, où vous êtes déjà connecté à Threads et/ou Instagram.
+
+> **Instagram** : le blocage d'une liste et le bouton « Bloquer » fonctionnent aussi sur Instagram.
+> L'export de vos blocages et la lecture des abonnements d'un compte restent pour l'instant
+> réservés à Threads.
 
 ---
 
@@ -41,14 +47,15 @@ La page blockedex a trois parties.
 
 ### Bloquer quelqu'un depuis un fil
 
-Sur threads.com, un petit bouton **Bloquer** apparaît à côté du nom de chaque auteur, dans les
-publications et les réponses (jamais à côté de votre propre nom). Un clic bloque le compte tout
+Sur threads.com et instagram.com, un petit bouton **Bloquer** apparaît à côté du nom de chaque
+auteur, dans les publications, les réponses et les commentaires (jamais à côté de votre propre nom). Un clic bloque le compte tout
 de suite, sans quitter la page : un onglet s'ouvre en arrière-plan quelques secondes, bloque le
 profil, puis se referme. Le bouton passe à **Blocage…** puis **Bloqué** (en vert). Si vous cliquez
 sur plusieurs noms, ils sont bloqués l'un après l'autre.
 
-Pour débloquer, passez par le profil du compte (bouton « Débloquer ») ou par *Réglages ›
-Confidentialité › Profils bloqués*.
+Le blocage se fait sur le réseau où vous cliquez : un bouton sur Instagram bloque sur Instagram.
+Pour débloquer, passez par le profil du compte (bouton « Débloquer ») ou par les réglages du réseau
+(*Profils bloqués* sur Threads, *Comptes bloqués* sur Instagram).
 
 ### Exporter vos blocages (pour les sauvegarder ou les partager)
 
@@ -96,16 +103,19 @@ Vos choix sont gardés, même si vous fermez la page.
 
 ### Bloquer
 
-1. Laissez les pauses par défaut (8 à 20 secondes entre deux blocages) et le maximum de
-   100 comptes par session.
-2. Cliquez sur **Démarrer** et confirmez.
-3. L'extension lit d'abord vos **profils bloqués** dans les réglages Threads (un onglet passe au
+1. Choisissez le **Réseau** : Threads ou Instagram. Chaque réseau garde sa propre progression : une
+   liste déjà appliquée sur Threads peut ensuite l'être sur Instagram.
+2. Laissez les pauses par défaut et le maximum par session : 8 à 20 secondes et 100 comptes sur
+   Threads ; **30 à 60 secondes et 30 comptes sur Instagram**, qui limite davantage l'automatisation.
+3. Cliquez sur **Démarrer** et confirmez.
+4. Sur Threads, l'extension lit d'abord vos **profils bloqués** dans les réglages (un onglet passe au
    premier plan quelques secondes, environ 25 s pour 500 comptes) : les comptes de la liste que vous
    bloquez déjà sont marqués « déjà bloqué » sans visiter leur profil. Pour une toute petite liste,
-   vous pouvez décocher l'option « Lire d'abord mes profils bloqués ».
-4. Un onglet Threads passe ensuite d'un profil à l'autre pour les comptes restants. **Laissez la page
-   blockedex ouverte et ne touchez pas à cet onglet Threads** tant que le traitement n'est pas
-   terminé : y cliquer ou y naviguer peut faire échouer des blocages.
+   vous pouvez décocher l'option « Lire d'abord mes profils bloqués ». Sur Instagram, chaque profil
+   est vérifié un par un.
+5. Un onglet passe ensuite d'un profil à l'autre pour les comptes restants. **Laissez la page
+   blockedex ouverte et ne touchez pas à cet onglet** tant que le traitement n'est pas terminé :
+   y cliquer ou y naviguer peut faire échouer des blocages.
 
 Chaque compte affiche son résultat :
 
@@ -121,14 +131,16 @@ déjà traités sont sautés. Avec une longue liste, faites 100 comptes, puis re
 
 ## 3. Bon à savoir
 
-- **Prudence avec votre compte** : l'extension clique dans Threads comme vous le feriez, ce que les
-  conditions d'utilisation de Meta ne prévoient pas. Bloquer des centaines de comptes trop vite peut
-  entraîner des limitations temporaires : gardez les pauses et le maximum par session.
+- **Prudence avec votre compte** : l'extension clique dans Threads et Instagram comme vous le
+  feriez, ce que les conditions d'utilisation de Meta ne prévoient pas. Bloquer des centaines de
+  comptes trop vite peut entraîner des limitations temporaires, plus vite sur Instagram (message
+  « Réessayez plus tard ») : gardez les pauses et le maximum par session, et arrêtez pour la journée
+  si Instagram affiche ce message.
 - **Relisez une liste reçue** avant de l'appliquer. Débloquer se fait un compte à la fois.
 - **Arrêt automatique** après 5 échecs de suite, ou si votre session Threads a expiré : reconnectez-vous
   sur threads.com, puis relancez.
-- L'extension a été vérifiée sur le vrai Threads (interface en français, octobre 2026). Si Threads
-  change son site, une étape peut se mettre à échouer : signalez-le dans les
+- L'extension a été vérifiée sur le vrai Threads et le vrai Instagram (interface en français,
+  octobre 2026). Si l'un d'eux change son site, une étape peut se mettre à échouer : signalez-le dans les
   [Issues](https://github.com/axel17460-hash/Thread-account-blocker/issues).
 
 ## 4. Mettre à jour
