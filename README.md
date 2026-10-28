@@ -62,7 +62,9 @@ Pour débloquer, passez par le profil du compte (bouton « Débloquer ») ou par
 Dans **3. Exporter mes blocages actuels**, choisissez le format (`.txt` conseillé) et cliquez sur
 **Exporter**. Un onglet Threads s'ouvre sur *Réglages › Confidentialité › Profils bloqués*, la
 liste défile toute seule, puis un fichier `blockedex-bloques-AAAA-MM-JJ.txt` est téléchargé.
-Comptez environ 25 secondes pour 500 comptes.
+Comptez environ 25 secondes pour 500 comptes. **Ne touchez à rien pendant ce temps** : ni à l'onglet
+Threads, ni à la souris dessus. Un bandeau en haut de la page blockedex le rappelle tant que
+l'opération est en cours.
 
 C'est ce fichier que vous envoyez à quelqu'un pour qu'il bloque les mêmes comptes.
 
@@ -82,7 +84,8 @@ Formats acceptés :
 
 Toujours dans **1. Importer une liste**, saisissez un pseudo (ou un lien de profil) et cliquez sur
 **Lire ses abonnements**. Un onglet Threads passe au premier plan, ouvre la liste des comptes que ce
-compte suit (*Suivi(e)s*) et la fait défiler. Comptez environ 4 minutes pour 800 comptes.
+compte suit (*Suivi(e)s*) et la fait défiler. Comptez environ 4 minutes pour 800 comptes, et ne
+touchez pas à cet onglet tant que le bandeau « Traitement en cours » est affiché.
 
 La liste lue remplace la liste à traiter : relisez-la et décochez ceux que vous ne voulez pas bloquer
 (un ami, un média…). **Télécharger les cochés** l'enregistre dans un fichier pour la partager.

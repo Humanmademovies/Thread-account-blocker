@@ -149,6 +149,7 @@ function refresh() {
   $('bar').value = done;
   $('picker').hidden = !total;
   for (const box of $('accounts').querySelectorAll('input')) box.disabled = !idle;
+  $('busy').hidden = idle;
   $('platform').disabled = !idle;
   $('platform-hint').hidden = platform().precheck;
   $('precheck').disabled = !idle || !platform().precheck;
@@ -273,7 +274,7 @@ $('read-following').addEventListener('click', async () => {
   running = true;
   refresh();
   progressEl = status;
-  setStatus(status, `Lecture des abonnements de @${handle} (un onglet Threads va passer au premier plan)...`);
+  setStatus(status, `Lecture des abonnements de @${handle} : un onglet Threads va passer au premier plan, n'y touchez pas...`);
   try {
     const result = await readInForeground(`${THREADS}/@${handle}`, 'readFollowing');
     if (result.status === STATUS.LOGIN_REQUIRED) {
@@ -367,7 +368,7 @@ const readCurrentBlocks = () => readInForeground(PRIVACY_URL, 'exportBlocked');
  * s'il faut s'arrêter (session expirée).
  */
 async function skipAlreadyBlocked(handles) {
-  log('Lecture de vos profils bloqués dans les réglages Threads (un onglet passe au premier plan)...');
+  log('Lecture de vos profils bloqués dans les réglages Threads : un onglet passe au premier plan, n\'y touchez pas...');
   let result;
   try {
     result = await readCurrentBlocks();
@@ -481,7 +482,7 @@ $('export-btn').addEventListener('click', async () => {
   const status = $('export-status');
   running = true; // verrouille les autres boutons pendant l'export
   refresh();
-  setStatus(status, 'Ouverture des réglages Threads (un onglet va passer au premier plan)...');
+  setStatus(status, 'Ouverture des réglages Threads : un onglet va passer au premier plan, n\'y touchez pas jusqu\'à la fin...');
   progressEl = status;
   try {
     const result = await readCurrentBlocks();
