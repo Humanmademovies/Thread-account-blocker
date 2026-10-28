@@ -1,26 +1,46 @@
 # La Blocklist
 
-**Une extension Chrome pour ignorer (ou bloquer) une liste de comptes Threads et Instagram.**
+**Une extension Chrome pour ignorer les comptes de votre liste sur Threads et Instagram : leurs
+publications restent dans votre fil, mais vous ne les voyez plus et ne pouvez plus interagir avec.**
 
-- **Masquer sans bloquer** (par défaut) : les publications des comptes de votre liste restent dans
-  votre fil mais sont recouvertes d'un emoji. Vous les voyez passer sans les lire ni interagir.
+## Pourquoi ignorer plutôt que bloquer ?
+
+André Janones l'a résumé dans [ce message](https://x.com/AndreJanonesMG/status/2115462221673218058) :
+bloquer un compte va à l'encontre du but recherché. L'algorithme comprend seulement que vous n'avez pas
+vu ses publications parce que vous l'avez bloqué. En revanche, quand une publication s'affiche dans
+votre fil et que vous l'ignorez (sans la lire, l'aimer, la commenter ni interagir d'aucune façon),
+l'algorithme la considère comme non pertinente, puisqu'elle vous a été montrée et que vous l'avez
+laissée de côté.
+
+> « Il y a une énorme différence entre bloquer du contenu et l'ignorer ! »
+> — André Janones (traduit de l'anglais)
+
+C'est ce que fait La Blocklist par défaut. Ignorer à la main demande de la discipline : on finit par
+lire, réagir, répondre. Ici, les publications des comptes de votre liste **restent dans votre fil**,
+mais sont **recouvertes d'un emoji** et ne peuvent plus être ouvertes, aimées ni commentées. Le réseau
+vous les montre, vous les laissez passer.
+
+> Ce raisonnement est celui de l'auteur du message ; Meta ne publie pas le fonctionnement exact de
+> ses algorithmes.
+
+## Ce que fait l'extension
+
+- **Masquer sans bloquer** (par défaut) : sur threads.com et instagram.com, chaque publication, réponse
+  ou commentaire d'un compte de votre liste est recouvert d'un emoji 🫧, sans rien envoyer au réseau.
 - **Liste de départ** : en un clic, ajoutez la liste « On bloque l'extrême droite » publiée sur
   [onbloquelextremedroite.fr](https://www.onbloquelextremedroite.fr/liste), tenue à jour chaque jour.
-- **Exporter** : récupère la liste de tous les comptes que vous avez bloqués, dans un fichier.
-- **Importer** : charge une liste de comptes (la vôtre, ou celle qu'un ami vous a envoyée).
-- **Partir d'un compte** : prend la liste des comptes que suit un compte Threads comme liste à bloquer.
-- **Bloquer depuis un fil** : un petit bouton « Bloquer » à côté de chaque auteur, directement sur
-  threads.com et instagram.com.
-- **Choisir** : vous cochez ou décochez chaque compte avant de lancer.
-- **Bloquer** : l'extension bloque les comptes cochés, un par un, sur **votre** compte Threads ou
-  Instagram (au choix).
+- **Importer** : chargez votre propre liste de comptes (ou celle qu'un ami vous a envoyée).
+- **Partir d'un compte** : prenez la liste des comptes que suit un compte Threads.
+- **Choisir** : cochez ou décochez chaque compte ; seuls les comptes cochés sont masqués.
+- **Bloquer, si vous préférez** : l'extension peut aussi bloquer les comptes cochés un par un, ou un
+  compte précis grâce au bouton « Bloquer » affiché à côté de chaque auteur.
+- **Exporter** : récupérez la liste des comptes que vous avez déjà bloqués sur Threads.
 
 Pas de compte à créer, pas de mot de passe demandé, rien n'est envoyé à un serveur : tout se passe
 dans votre Chrome, où vous êtes déjà connecté à Threads et/ou Instagram.
 
-> **Instagram** : le blocage d'une liste et le bouton « Bloquer » fonctionnent aussi sur Instagram.
-> L'export de vos blocages et la lecture des abonnements d'un compte restent pour l'instant
-> réservés à Threads.
+> L'export de vos blocages et la lecture des abonnements d'un compte sont pour l'instant réservés à
+> Threads ; tout le reste fonctionne sur Threads et Instagram.
 
 ---
 
@@ -71,30 +91,6 @@ Si vous remplacez ensuite votre liste (fichier importé, abonnements d'un compte
 n'en fait plus partie et ses mises à jour ne la réintroduisent pas ; la carte propose de l'ajouter à
 nouveau.
 
-### Bloquer quelqu'un depuis un fil
-
-Sur threads.com et instagram.com, un petit bouton **Bloquer** apparaît à côté du nom de chaque
-auteur, dans les publications, les réponses et les commentaires (jamais à côté de votre propre nom). Un clic bloque le compte tout
-de suite, sans quitter la page : un onglet s'ouvre en arrière-plan quelques secondes, bloque le
-profil, puis se referme. Le bouton passe à **Blocage…** puis **Bloqué** (en vert). Si vous cliquez
-sur plusieurs noms, ils sont bloqués l'un après l'autre.
-
-Le blocage se fait sur le réseau où vous cliquez : un bouton sur Instagram bloque sur Instagram.
-Pour débloquer, passez par le profil du compte (bouton « Débloquer ») ou par les réglages du réseau
-(*Profils bloqués* sur Threads, *Comptes bloqués* sur Instagram).
-
-### Exporter vos blocages (pour les sauvegarder ou les partager)
-
-Dans **3. Exporter mes blocages actuels**, choisissez le format (`.txt` conseillé) et cliquez sur
-**Exporter**. Un onglet Threads s'ouvre sur *Réglages › Confidentialité › Profils bloqués*, la
-liste défile toute seule, puis un fichier `la-blocklist-bloques-AAAA-MM-JJ.txt` est téléchargé.
-Comptez environ 25 secondes pour 500 comptes. **Ne touchez à rien pendant ce temps** : ni à l'onglet
-Threads, ni à la souris dessus. Pendant toute l'opération, l'onglet Threads est recouvert d'un voile
-« La Blocklist travaille dans cet onglet : ne touchez à rien » qui affiche l'étape en cours et bloque
-les clics et le défilement ; la page La Blocklist affiche le même avancement en haut.
-
-C'est ce fichier que vous envoyez à quelqu'un pour qu'il bloque les mêmes comptes.
-
 ### Importer une liste
 
 Dans **1. Importer une liste**, choisissez le fichier reçu (ou collez des comptes dans la zone de
@@ -121,11 +117,22 @@ La liste lue remplace la liste à traiter : relisez-la et décochez ceux que vou
 > 1 235 annoncés). L'extension l'indique quand la lecture est partielle. Un compte privé que vous ne
 > suivez pas ne peut pas être lu.
 
+### Choisir les comptes
+
+Sous **2. Ignorer ou bloquer les comptes cochés**, chaque compte de la liste apparaît avec une case,
+**toutes cochées** au départ. Décochez ceux que vous voulez laisser tranquilles :
+
+- la **recherche** filtre la liste ;
+- **Tout cocher** / **Tout décocher** s'appliquent aux comptes affichés (pratique après une recherche).
+
+Vos choix sont gardés, même si vous fermez la page.
+
 ### Masquer sans bloquer (recommandé)
 
-Bloquer n'est pas toujours le meilleur choix : un compte bloqué ne vous est plus montré du tout. La
-Blocklist propose donc d'abord de **les ignorer** : dans **2. Ignorer ou bloquer les comptes cochés**,
-l'option **Masquer leurs publications, sans les bloquer** est cochée par défaut.
+C'est le mode par défaut, pour les raisons expliquées dans
+[Pourquoi ignorer plutôt que bloquer ?](#pourquoi-ignorer-plutôt-que-bloquer-) : dans
+**2. Ignorer ou bloquer les comptes cochés**, l'option **Masquer leurs publications, sans les
+bloquer** est cochée.
 
 Sur threads.com et instagram.com, chaque publication, réponse ou commentaire d'un compte coché reste à
 sa place et à sa taille dans votre fil, mais il est recouvert d'un emoji qui apparaît en sautillant
@@ -138,17 +145,11 @@ publication vous a été montrée et vous ne vous y êtes pas intéressé.
   tout redevient normal.
 - Cela fonctionne avec la liste de départ comme avec votre propre liste.
 
-### Choisir les comptes
+### Ou les bloquer
 
-Sous **2. Ignorer ou bloquer les comptes cochés**, chaque compte de la liste apparaît avec une case,
-**toutes cochées** au départ. Décochez ceux que vous voulez laisser tranquilles :
-
-- la **recherche** filtre la liste ;
-- **Tout cocher** / **Tout décocher** s'appliquent aux comptes affichés (pratique après une recherche).
-
-Vos choix sont gardés, même si vous fermez la page.
-
-### Bloquer
+Si vous préférez bloquer, la partie **Ou les bloquer** de la même section bloque les comptes cochés,
+un par un, sur votre compte Threads ou Instagram. Gardez en tête que bloquer retire complètement le
+compte de votre fil : c'est plus radical que l'ignorer.
 
 1. Choisissez le **Réseau** : Threads ou Instagram. Chaque réseau garde sa propre progression : une
    liste déjà appliquée sur Threads peut ensuite l'être sur Instagram.
@@ -175,6 +176,30 @@ Chaque compte affiche son résultat :
 
 **Arrêter** interrompt proprement. Relancer **Démarrer** reprend là où vous en étiez : les comptes
 déjà traités sont sautés. Avec une longue liste, faites 100 comptes, puis relancez plus tard.
+
+### Bloquer quelqu'un depuis un fil
+
+Sur threads.com et instagram.com, un petit bouton **Bloquer** apparaît à côté du nom de chaque
+auteur, dans les publications, les réponses et les commentaires (jamais à côté de votre propre nom). Un clic bloque le compte tout
+de suite, sans quitter la page : un onglet s'ouvre en arrière-plan quelques secondes, bloque le
+profil, puis se referme. Le bouton passe à **Blocage…** puis **Bloqué** (en vert). Si vous cliquez
+sur plusieurs noms, ils sont bloqués l'un après l'autre.
+
+Le blocage se fait sur le réseau où vous cliquez : un bouton sur Instagram bloque sur Instagram.
+Pour débloquer, passez par le profil du compte (bouton « Débloquer ») ou par les réglages du réseau
+(*Profils bloqués* sur Threads, *Comptes bloqués* sur Instagram).
+
+### Exporter vos blocages (pour les sauvegarder ou les partager)
+
+Dans **3. Exporter mes blocages actuels**, choisissez le format (`.txt` conseillé) et cliquez sur
+**Exporter**. Un onglet Threads s'ouvre sur *Réglages › Confidentialité › Profils bloqués*, la
+liste défile toute seule, puis un fichier `la-blocklist-bloques-AAAA-MM-JJ.txt` est téléchargé.
+Comptez environ 25 secondes pour 500 comptes. **Ne touchez à rien pendant ce temps** : ni à l'onglet
+Threads, ni à la souris dessus. Pendant toute l'opération, l'onglet Threads est recouvert d'un voile
+« La Blocklist travaille dans cet onglet : ne touchez à rien » qui affiche l'étape en cours et bloque
+les clics et le défilement ; la page La Blocklist affiche le même avancement en haut.
+
+C'est ce fichier que vous envoyez à quelqu'un pour qu'il bloque les mêmes comptes.
 
 ## 3. Bon à savoir
 
