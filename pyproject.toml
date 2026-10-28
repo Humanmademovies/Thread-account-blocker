@@ -1,0 +1,15 @@
+[project]
+name = "threads-blocker"
+version = "0.1.0"
+description = "Importer et appliquer des listes de blocage sur Threads"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+browser = ["playwright>=1.40"]
+
+[project.scripts]
+threads-blocker = "threads_blocker.cli:main"
+
+[tool.setuptools]
+packages = ["threads_blocker"]

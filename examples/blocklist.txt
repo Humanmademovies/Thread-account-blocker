@@ -1,0 +1,3 @@
+# exemple
+@spam_account
+https://www.threads.net/@bot.farm
