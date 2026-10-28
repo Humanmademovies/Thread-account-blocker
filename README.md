@@ -33,6 +33,19 @@ python -m threads_blocker apply ma_liste.txt --dry-run
 python -m threads_blocker apply ma_liste.txt
 ```
 
+### Exporter votre liste actuelle
+
+```bash
+python -m threads_blocker export mes_blocages.txt     # ou .csv / .json
+```
+
+Ouvre Réglages › Confidentialité › Profils bloqués, fait défiler la liste jusqu'au bout et l'écrit
+dans le fichier. Le résultat est relisible tel quel par `check` et `apply` (utile pour sauvegarder, ou
+pour reporter vos blocages sur un autre compte). Rien n'est écrit si aucun compte n'est récupéré, et un
+fichier existant n'est écrasé qu'avec `--force`.
+
+> Comme pour le blocage, l'étape de lecture dans l'interface n'a pas encore été éprouvée sur un vrai compte.
+
 ### Formats acceptés
 
 - `.txt` : un compte par ligne ; `@pseudo`, `pseudo` ou URL de profil `threads.net/@pseudo` ; `#` pour les commentaires.

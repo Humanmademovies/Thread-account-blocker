@@ -7,7 +7,8 @@ import sys
 from pathlib import Path
 
 from .blocklist import BlocklistError, ParsedList, parse_blocklists
-from .runner import run
+from .export import write_blocklist
+from .runner import BackendError, run
 from .state import State, Status
 
 DEFAULT_HOME = Path.home() / ".threads-blocker"
@@ -83,6 +84,24 @@ def cmd_apply(args: argparse.Namespace) -> int:
     return 1 if summary.aborted else 0
 
 
+def cmd_export(args: argparse.Namespace) -> int:
+    from .browser import BrowserBackend
+
+    if args.output.exists() and not args.force:
+        sys.exit(f"Erreur : {args.output} existe déjà (utilisez --force pour l'écraser).")
+    with BrowserBackend(args.profile_dir, headless=args.headless, debug_dir=args.profile_dir.parent / "failures") as backend:
+        try:
+            handles = backend.list_blocked()
+        except BackendError as exc:
+            sys.exit(f"Erreur : {exc}")
+    if not handles:
+        print("Aucun compte récupéré : rien n'a été écrit (liste vide, ou interface modifiée ?).")
+        return 1
+    write_blocklist(handles, args.output)
+    print(f"{len(handles)} comptes exportés dans {args.output}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="threads_blocker", description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -95,6 +114,13 @@ def build_parser() -> argparse.ArgumentParser:
     login = sub.add_parser("login", help="se connecter à Threads (une seule fois)")
     login.add_argument("--profile-dir", type=Path, default=DEFAULT_HOME / "profile")
     login.set_defaults(func=cmd_login)
+
+    export = sub.add_parser("export", help="exporte vos comptes bloqués actuels vers un fichier")
+    export.add_argument("output", type=Path, help="fichier de sortie (.txt, .csv ou .json)")
+    export.add_argument("--force", action="store_true", help="écraser le fichier s'il existe")
+    export.add_argument("--profile-dir", type=Path, default=DEFAULT_HOME / "profile")
+    export.add_argument("--headless", action="store_true", help="sans fenêtre (à éviter au début)")
+    export.set_defaults(func=cmd_export)
 
     apply = sub.add_parser("apply", help="bloque les comptes des listes")
     apply.add_argument("files", nargs="+", type=Path)

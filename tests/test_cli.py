@@ -38,6 +38,11 @@ class CliTest(unittest.TestCase):
         self.assertIn("bloquerait @bob", out)
         self.assertEqual(self.state.read_text(), before)
 
+    def test_export_refuses_to_overwrite(self):
+        with self.assertRaises(SystemExit) as ctx:
+            run_cli("export", str(self.list))
+        self.assertIn("existe déjà", str(ctx.exception))
+
     def test_empty_list_fails(self):
         empty = Path(self.tmp.name) / "e.txt"
         empty.write_text("# rien\n")
