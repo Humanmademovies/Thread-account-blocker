@@ -63,8 +63,9 @@ Dans **3. Exporter mes blocages actuels**, choisissez le format (`.txt` conseill
 **Exporter**. Un onglet Threads s'ouvre sur *Réglages › Confidentialité › Profils bloqués*, la
 liste défile toute seule, puis un fichier `blockedex-bloques-AAAA-MM-JJ.txt` est téléchargé.
 Comptez environ 25 secondes pour 500 comptes. **Ne touchez à rien pendant ce temps** : ni à l'onglet
-Threads, ni à la souris dessus. Un bandeau en haut de la page blockedex le rappelle tant que
-l'opération est en cours.
+Threads, ni à la souris dessus. Pendant toute l'opération, l'onglet Threads est recouvert d'un voile
+« blockedex travaille dans cet onglet : ne touchez à rien » qui affiche l'étape en cours et bloque
+les clics et le défilement ; la page blockedex affiche le même avancement en haut.
 
 C'est ce fichier que vous envoyez à quelqu'un pour qu'il bloque les mêmes comptes.
 
