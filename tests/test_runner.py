@@ -3,8 +3,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from threads_blocker.runner import BackendError, run
-from threads_blocker.state import State, Status
+from blockedex.runner import BackendError, run
+from blockedex.state import State, Status
 
 
 class FakeBackend:

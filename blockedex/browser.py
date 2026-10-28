@@ -1,4 +1,4 @@
-"""Backend Playwright : pilote le site Threads avec la session de l'utilisateur.
+"""Backend Playwright : pilote le site Threads dans Google Chrome, avec la session de l'utilisateur.
 
 L'API officielle de Threads n'expose aucun endpoint de blocage ; on automatise donc
 l'interface web, dans un profil de navigateur dédié où l'utilisateur se connecte
@@ -49,13 +49,22 @@ class BrowserBackend:
         except ImportError as exc:
             raise SystemExit(
                 "Playwright n'est pas installé. Lancez :\n"
-                "  pip install playwright && playwright install chromium"
+                "  pip install playwright"
             ) from exc
         self.profile_dir.mkdir(parents=True, exist_ok=True)
         self._playwright = sync_playwright().start()
-        self._context = self._playwright.chromium.launch_persistent_context(
-            str(self.profile_dir), headless=self.headless, locale="en-US"
-        )
+        try:
+            # channel="chrome" : utilise le Google Chrome installé, pas le Chromium de Playwright.
+            self._context = self._playwright.chromium.launch_persistent_context(
+                str(self.profile_dir), channel="chrome", headless=self.headless, locale="en-US"
+            )
+        except Exception as exc:
+            self._playwright.stop()
+            if "chrome" in str(exc).lower() and "not found" in str(exc).lower():
+                raise SystemExit(
+                    "Google Chrome est introuvable. Installez-le, ou lancez : playwright install chrome"
+                ) from exc
+            raise
         self._context.set_default_timeout(ACTION_TIMEOUT_MS)
         self._page = self._context.pages[0] if self._context.pages else self._context.new_page()
         return self

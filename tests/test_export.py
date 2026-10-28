@@ -3,8 +3,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from threads_blocker.blocklist import parse_blocklists
-from threads_blocker.export import collect_scrolling, handle_from_href, write_blocklist
+from blockedex.blocklist import parse_blocklists
+from blockedex.export import collect_scrolling, handle_from_href, write_blocklist
 
 
 class HrefTest(unittest.TestCase):

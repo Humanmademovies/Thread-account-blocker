@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from threads_blocker.blocklist import BlocklistError, normalize_handle, parse_blocklists
+from blockedex.blocklist import BlocklistError, normalize_handle, parse_blocklists
 
 
 def parse(name: str, content: str):

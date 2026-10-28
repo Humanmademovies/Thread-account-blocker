@@ -1,4 +1,4 @@
-"""Interface en ligne de commande : check / login / apply."""
+"""Interface en ligne de commande : check / login / apply / export."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from .export import write_blocklist
 from .runner import BackendError, run
 from .state import State, Status
 
-DEFAULT_HOME = Path.home() / ".threads-blocker"
+DEFAULT_HOME = Path.home() / ".blockedex"
 
 
 def _load(files: list[Path]) -> ParsedList:
@@ -103,7 +103,7 @@ def cmd_export(args: argparse.Namespace) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="threads_blocker", description=__doc__)
+    parser = argparse.ArgumentParser(prog="blockedex", description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
 
     check = sub.add_parser("check", help="valide des listes sans rien bloquer")
