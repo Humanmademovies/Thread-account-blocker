@@ -1,4 +1,4 @@
-"""Backend Playwright : pilote le site Threads avec la session de l'utilisateur.
+"""Backend Playwright : pilote le site Threads dans Google Chrome, avec la session de l'utilisateur.
 
 L'API officielle de Threads n'expose aucun endpoint de blocage ; on automatise donc
 l'interface web, dans un profil de navigateur dédié où l'utilisateur se connecte
@@ -13,11 +13,13 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from .export import collect_scrolling, handle_from_href
 from .runner import BackendError
 from .state import Status
 
 PROFILE_URL = "https://www.threads.com/@{handle}"
 LOGIN_URL = "https://www.threads.com/login"
+PRIVACY_URL = "https://www.threads.com/settings/privacy"
 
 NOT_FOUND_RE = re.compile(
     r"(this page isn.t available|page not found|cette page n.est pas disponible|page introuvable)",
@@ -27,6 +29,7 @@ MORE_BUTTON_RE = re.compile(r"^(more|plus)$", re.IGNORECASE)
 BLOCK_RE = re.compile(r"^(block|bloquer)$", re.IGNORECASE)
 UNBLOCK_RE = re.compile(r"^(unblock|débloquer)$", re.IGNORECASE)
 LOGIN_RE = re.compile(r"^(log in|se connecter)$", re.IGNORECASE)
+BLOCKED_ROW_RE = re.compile(r"(blocked profiles|profils bloqués)", re.IGNORECASE)
 
 ACTION_TIMEOUT_MS = 8_000
 
@@ -46,13 +49,22 @@ class BrowserBackend:
         except ImportError as exc:
             raise SystemExit(
                 "Playwright n'est pas installé. Lancez :\n"
-                "  pip install playwright && playwright install chromium"
+                "  pip install playwright"
             ) from exc
         self.profile_dir.mkdir(parents=True, exist_ok=True)
         self._playwright = sync_playwright().start()
-        self._context = self._playwright.chromium.launch_persistent_context(
-            str(self.profile_dir), headless=self.headless, locale="en-US"
-        )
+        try:
+            # channel="chrome" : utilise le Google Chrome installé, pas le Chromium de Playwright.
+            self._context = self._playwright.chromium.launch_persistent_context(
+                str(self.profile_dir), channel="chrome", headless=self.headless, locale="en-US"
+            )
+        except Exception as exc:
+            self._playwright.stop()
+            if "chrome" in str(exc).lower() and "not found" in str(exc).lower():
+                raise SystemExit(
+                    "Google Chrome est introuvable. Installez-le, ou lancez : playwright install chrome"
+                ) from exc
+            raise
         self._context.set_default_timeout(ACTION_TIMEOUT_MS)
         self._page = self._context.pages[0] if self._context.pages else self._context.new_page()
         return self
@@ -72,8 +84,7 @@ class BrowserBackend:
         page = self._page
         try:
             response = page.goto(PROFILE_URL.format(handle=handle), wait_until="domcontentloaded")
-            if page.get_by_role("link", name=LOGIN_RE).count() or page.get_by_role("button", name=LOGIN_RE).count():
-                raise BackendError("Session Threads absente ou expirée : relancez `login`.")
+            self._require_login()
             if (response and response.status == 404) or self._looks_not_found():
                 return Status.NOT_FOUND
 
@@ -92,6 +103,40 @@ class BrowserBackend:
         except Exception as exc:  # timeout, sélecteur introuvable, navigation échouée...
             self._save_debug(handle, exc)
             return Status.FAILED
+
+    def list_blocked(self, log=print) -> list[str]:
+        """Lit la liste « Profils bloqués » des réglages de confidentialité, en la faisant défiler."""
+        page = self._page
+        page.goto(PRIVACY_URL, wait_until="domcontentloaded")
+        self._require_login()
+        try:
+            page.get_by_text(BLOCKED_ROW_RE).first.click()
+            dialog = page.get_by_role("dialog")
+            dialog.wait_for()
+        except Exception as exc:
+            self._save_debug("export", exc)
+            raise BackendError(
+                "Impossible d'ouvrir la liste des profils bloqués (interface modifiée ?)."
+            ) from exc
+
+        profile_links = dialog.locator("a[href^='/@']")
+
+        def read_visible() -> list[str]:
+            hrefs = profile_links.evaluate_all("els => els.map(e => e.getAttribute('href'))")
+            return [h for h in map(handle_from_href, hrefs) if h]
+
+        def scroll() -> None:
+            if profile_links.count():
+                profile_links.last.scroll_into_view_if_needed()
+            dialog.hover()
+            page.mouse.wheel(0, 2000)
+
+        return collect_scrolling(read_visible, scroll, log=log)
+
+    def _require_login(self) -> None:
+        page = self._page
+        if page.get_by_role("link", name=LOGIN_RE).count() or page.get_by_role("button", name=LOGIN_RE).count():
+            raise BackendError("Session Threads absente ou expirée : relancez `login`.")
 
     def _looks_not_found(self) -> bool:
         body = self._page.locator("body").inner_text(timeout=ACTION_TIMEOUT_MS)

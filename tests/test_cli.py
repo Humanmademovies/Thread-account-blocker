@@ -4,8 +4,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from threads_blocker.cli import main
-from threads_blocker.state import State, Status
+from blockedex.cli import main
+from blockedex.state import State, Status
 
 
 def run_cli(*argv):
@@ -37,6 +37,11 @@ class CliTest(unittest.TestCase):
         self.assertNotIn("@alice", out)
         self.assertIn("bloquerait @bob", out)
         self.assertEqual(self.state.read_text(), before)
+
+    def test_export_refuses_to_overwrite(self):
+        with self.assertRaises(SystemExit) as ctx:
+            run_cli("export", str(self.list))
+        self.assertIn("existe déjà", str(ctx.exception))
 
     def test_empty_list_fails(self):
         empty = Path(self.tmp.name) / "e.txt"

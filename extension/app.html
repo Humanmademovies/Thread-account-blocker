@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>blockedex</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <main>
+    <header>
+      <h1>blockedex</h1>
+      <p class="lead">Importez, appliquez et exportez des listes de blocage sur Threads, depuis votre Chrome déjà connecté.</p>
+    </header>
+
+    <section id="import">
+      <h2>1. Importer une liste</h2>
+      <p class="hint">Un compte par ligne : <code>@pseudo</code>, <code>pseudo</code> ou lien de profil. Fichiers <code>.txt</code>, <code>.csv</code> ou <code>.json</code> acceptés.</p>
+      <textarea id="paste" rows="6" spellcheck="false" placeholder="@spam_account&#10;https://www.threads.com/@bot.farm"></textarea>
+      <div class="row">
+        <input type="file" id="file" accept=".txt,.csv,.json" multiple>
+        <button id="load" class="primary">Charger la liste</button>
+      </div>
+      <p id="parse-summary" class="status" role="status"></p>
+    </section>
+
+    <section id="apply">
+      <h2>2. Appliquer les blocages</h2>
+      <p id="counts" class="status">Aucune liste chargée.</p>
+      <div class="row settings">
+        <label>Pause min (s) <input type="number" id="min" min="0" step="1" value="8"></label>
+        <label>Pause max (s) <input type="number" id="max" min="0" step="1" value="20"></label>
+        <label>Max par session <input type="number" id="limit" min="0" step="10" value="100"></label>
+      </div>
+      <p class="hint">Les pauses et le plafond limitent le risque de restriction de votre compte. Laissez cette page ouverte pendant le traitement ; un onglet Threads de travail s'ouvre en arrière-plan.</p>
+      <div class="row">
+        <button id="start" class="primary" disabled>Démarrer</button>
+        <button id="stop" disabled>Arrêter</button>
+        <button id="reset" class="quiet" disabled>Réinitialiser la progression</button>
+      </div>
+      <progress id="bar" value="0" max="1" hidden></progress>
+      <ul id="log" aria-live="polite"></ul>
+    </section>
+
+    <section id="export">
+      <h2>3. Exporter mes blocages actuels</h2>
+      <p class="hint">Lit Réglages › Confidentialité › Profils bloqués et enregistre la liste dans un fichier, relisible ici à l'étape 1.</p>
+      <div class="row">
+        <label>Format
+          <select id="format">
+            <option value="txt">.txt</option>
+            <option value="csv">.csv</option>
+            <option value="json">.json</option>
+          </select>
+        </label>
+        <button id="export-btn">Exporter</button>
+      </div>
+      <p id="export-status" class="status" role="status"></p>
+    </section>
+
+    <footer>
+      <p>Cet outil automatise l'interface web de Threads, ce que les conditions d'utilisation de Meta ne prévoient pas : un usage intensif peut entraîner des limitations de compte. Relisez toute liste reçue d'un tiers avant de l'appliquer.</p>
+    </footer>
+  </main>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
