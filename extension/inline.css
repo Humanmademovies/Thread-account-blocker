@@ -1,0 +1,19 @@
+/* Bouton « Bloquer » ajouté par inline.js à côté des noms d'auteurs sur threads.com. */
+.blockedex-btn {
+  margin-left: 6px;
+  padding: 0 7px;
+  height: 18px;
+  border: 1px solid currentColor;
+  border-radius: 9px;
+  background: transparent;
+  color: #e0245e;
+  font: 600 11px/16px system-ui, -apple-system, "Segoe UI", sans-serif;
+  vertical-align: middle;
+  cursor: pointer;
+  opacity: 0.6;
+}
+.blockedex-btn:hover:not(:disabled), .blockedex-btn:focus-visible { opacity: 1; }
+.blockedex-btn[data-state="pending"] { color: #8a8d91; cursor: progress; opacity: 1; }
+.blockedex-btn[data-state="blocked"], .blockedex-btn[data-state="already_blocked"] { color: #16a34a; cursor: default; opacity: 1; }
+.blockedex-btn[data-state="not_found"] { color: #8a8d91; cursor: default; }
+.blockedex-btn[data-state="failed"], .blockedex-btn[data-state="login_required"] { color: #d97706; opacity: 1; }

@@ -9,3 +9,53 @@ chrome.action.onClicked.addListener(async () => {
     await chrome.tabs.create({ url: chrome.runtime.getURL('app.html') });
   }
 });
+
+// Bouton « Bloquer » des fils (inline.js) : le profil est ouvert dans un onglet en arrière-plan,
+// bloqué avec content.js, puis l'onglet est refermé. Un blocage à la fois, dans l'ordre des clics.
+const HANDLE_RE = /^[a-z0-9._]{1,30}$/;
+let queue = Promise.resolve();
+
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg?.type !== 'blockedex:block') return undefined;
+  if (!HANDLE_RE.test(msg.handle || '')) {
+    sendResponse({ status: 'failed', detail: 'pseudo invalide' });
+    return undefined;
+  }
+  queue = queue
+    .then(() => blockInBackground(msg.handle))
+    .catch((e) => ({ status: 'failed', detail: e.message }))
+    .then((result) => sendResponse(result));
+  return true; // réponse asynchrone
+});
+
+async function blockInBackground(handle) {
+  const tab = await chrome.tabs.create({ url: `https://www.threads.com/@${handle}`, active: false });
+  try {
+    await waitForLoad(tab.id);
+    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
+    const [{ result }] = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: () => globalThis.__blockedex.blockProfile(),
+    });
+    return result;
+  } finally {
+    chrome.tabs.remove(tab.id).catch(() => {});
+  }
+}
+
+function waitForLoad(tabId, timeoutMs = 30000) {
+  return new Promise((resolve, reject) => {
+    const done = (fn, arg) => {
+      clearTimeout(timer);
+      chrome.tabs.onUpdated.removeListener(onUpdated);
+      fn(arg);
+    };
+    const onUpdated = (id, info) => {
+      if (id === tabId && info.status === 'complete') done(resolve);
+    };
+    const timer = setTimeout(() => done(reject, new Error('chargement du profil trop long')), timeoutMs);
+    chrome.tabs.onUpdated.addListener(onUpdated);
+    // Le chargement a pu se terminer avant que l'on écoute.
+    chrome.tabs.get(tabId).then((tab) => { if (tab.status === 'complete') done(resolve); }, (e) => done(reject, e));
+  });
+}

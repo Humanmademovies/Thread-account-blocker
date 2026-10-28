@@ -6,6 +6,7 @@ partager vos propres blocages.**
 - **Exporter** : récupère la liste de tous les comptes que vous avez bloqués, dans un fichier.
 - **Importer** : charge une liste de comptes (la vôtre, ou celle qu'un ami vous a envoyée).
 - **Partir d'un compte** : prend la liste des comptes que suit un compte Threads comme liste à bloquer.
+- **Bloquer depuis un fil** : un petit bouton « Bloquer » à côté de chaque auteur, directement sur threads.com.
 - **Choisir** : vous cochez ou décochez chaque compte avant de lancer.
 - **Bloquer** : l'extension bloque les comptes cochés, un par un, sur **votre** compte Threads.
 
@@ -37,6 +38,17 @@ Cliquez sur l'icône blockedex : la page de l'outil s'ouvre.
 ## 2. Utiliser
 
 La page blockedex a trois parties.
+
+### Bloquer quelqu'un depuis un fil
+
+Sur threads.com, un petit bouton **Bloquer** apparaît à côté du nom de chaque auteur, dans les
+publications et les réponses (jamais à côté de votre propre nom). Un clic bloque le compte tout
+de suite, sans quitter la page : un onglet s'ouvre en arrière-plan quelques secondes, bloque le
+profil, puis se referme. Le bouton passe à **Blocage…** puis **Bloqué** (en vert). Si vous cliquez
+sur plusieurs noms, ils sont bloqués l'un après l'autre.
+
+Pour débloquer, passez par le profil du compte (bouton « Débloquer ») ou par *Réglages ›
+Confidentialité › Profils bloqués*.
 
 ### Exporter vos blocages (pour les sauvegarder ou les partager)
 

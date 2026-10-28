@@ -29,9 +29,10 @@
     const svg = el.querySelector('svg[aria-label]');
     return svg ? svg.getAttribute('aria-label').trim() : '';
   };
+  // Les boutons « Bloquer » ajoutés par inline.js (classe blockedex-btn) ne font pas partie de Threads.
   const find = (re, root = document) =>
     [...root.querySelectorAll('[role="button"],[role="menuitem"],button,a')]
-      .find((el) => isVisible(el) && re.test(labelOf(el)));
+      .find((el) => isVisible(el) && !el.classList.contains('blockedex-btn') && re.test(labelOf(el)));
   // La navigation et l'en-tête de colonne ont aussi un bouton « Plus ». Le vrai Threads n'a pas de <main> :
   // on part du bouton d'action du profil (Suivre, Débloquer…) et on remonte jusqu'au premier « Plus ».
   const findMoreButton = () => {
