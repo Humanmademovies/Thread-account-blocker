@@ -1,8 +1,10 @@
-# blockedex
+# La Blocklist
 
 **Une extension Chrome pour bloquer d'un coup une liste de comptes Threads ou Instagram, et pour
 sauvegarder ou partager vos propres blocages.**
 
+- **Liste de départ** : en un clic, ajoutez la liste « On bloque l'extrême droite » publiée sur
+  [onbloquelextremedroite.fr](https://www.onbloquelextremedroite.fr/liste), tenue à jour chaque jour.
 - **Exporter** : récupère la liste de tous les comptes que vous avez bloqués, dans un fichier.
 - **Importer** : charge une liste de comptes (la vôtre, ou celle qu'un ami vous a envoyée).
 - **Partir d'un compte** : prend la liste des comptes que suit un compte Threads comme liste à bloquer.
@@ -25,25 +27,48 @@ dans votre Chrome, où vous êtes déjà connecté à Threads et/ou Instagram.
 
 L'extension n'est pas sur le Chrome Web Store : on l'installe à la main, une seule fois.
 
-1. **Téléchargez** le fichier `blockedex-extension-….zip` sur la page
+1. **Téléchargez** le fichier `la-blocklist-extension-….zip` sur la page
    [Releases](https://github.com/axel17460-hash/Thread-account-blocker/releases/latest).
 2. **Décompressez-le** (clic droit › *Extraire tout…*) dans un dossier que vous ne supprimerez pas,
-   par exemple `Documents\blockedex`. Chrome lit l'extension dans ce dossier à chaque démarrage.
+   par exemple `Documents\La Blocklist`. Chrome lit l'extension dans ce dossier à chaque démarrage.
 3. Dans Chrome, tapez `chrome://extensions` dans la barre d'adresse.
 4. En haut à droite, activez **Mode développeur**.
 5. Cliquez sur **Charger l'extension non empaquetée** et choisissez le dossier décompressé
    (celui qui contient `manifest.json`).
-6. Cliquez sur l'icône puzzle 🧩 de la barre d'outils et **épinglez** blockedex.
-7. Vérifiez que vous êtes connecté sur [threads.com](https://www.threads.com) dans ce Chrome.
+6. Cliquez sur l'icône puzzle 🧩 de la barre d'outils et **épinglez** La Blocklist.
+7. Vérifiez que vous êtes connecté sur [instagram.com](https://www.instagram.com) et/ou
+   [threads.com](https://www.threads.com) dans ce Chrome.
 
-Cliquez sur l'icône blockedex : la page de l'outil s'ouvre.
+Cliquez sur l'icône La Blocklist : la page de l'outil s'ouvre.
 
 > Au démarrage, Chrome peut afficher un avertissement sur les « extensions en mode développeur » :
 > c'est normal pour une extension installée de cette façon.
 
 ## 2. Utiliser
 
-La page blockedex a trois parties.
+La page La Blocklist a trois parties.
+
+### Ajouter la liste de départ « On bloque l'extrême droite »
+
+En haut de **1. Importer une liste**, la carte **Liste de départ** propose la liste de comptes
+Instagram (personnalités, fachosphère, partis et médias) publiée par MISE AU POING sur
+[onbloquelextremedroite.fr](https://www.onbloquelextremedroite.fr/liste). Cliquez sur
+**Ajouter à ma liste** : ses comptes s'ajoutent à votre liste, tous cochés, avec leur nom à côté du
+pseudo. Si votre liste était vide, le réseau passe tout seul sur **Instagram**.
+
+Relisez-la, décochez ceux que vous ne voulez pas bloquer, puis cliquez sur **Démarrer** comme pour
+n'importe quelle liste.
+
+**Mise à jour automatique** (cochée par défaut) : chaque jour, et au démarrage de Chrome, l'extension
+retélécharge la liste du site. Les nouveaux comptes sont ajoutés à votre liste et ceux que le site a
+retirés en sont enlevés ; les comptes que vous avez ajoutés vous-même ne sont jamais touchés. L'icône
+de l'extension affiche alors un badge **+N**, et la carte indique ce qui a changé et quand.
+**Rien n'est bloqué sans vous** : relancez **Démarrer** pour bloquer les nouveaux comptes (ceux déjà
+traités sont sautés). **Vérifier les mises à jour maintenant** force une vérification.
+
+Si vous remplacez ensuite votre liste (fichier importé, abonnements d'un compte), la liste de départ
+n'en fait plus partie et ses mises à jour ne la réintroduisent pas ; la carte propose de l'ajouter à
+nouveau.
 
 ### Bloquer quelqu'un depuis un fil
 
@@ -61,11 +86,11 @@ Pour débloquer, passez par le profil du compte (bouton « Débloquer ») ou par
 
 Dans **3. Exporter mes blocages actuels**, choisissez le format (`.txt` conseillé) et cliquez sur
 **Exporter**. Un onglet Threads s'ouvre sur *Réglages › Confidentialité › Profils bloqués*, la
-liste défile toute seule, puis un fichier `blockedex-bloques-AAAA-MM-JJ.txt` est téléchargé.
+liste défile toute seule, puis un fichier `la-blocklist-bloques-AAAA-MM-JJ.txt` est téléchargé.
 Comptez environ 25 secondes pour 500 comptes. **Ne touchez à rien pendant ce temps** : ni à l'onglet
 Threads, ni à la souris dessus. Pendant toute l'opération, l'onglet Threads est recouvert d'un voile
-« blockedex travaille dans cet onglet : ne touchez à rien » qui affiche l'étape en cours et bloque
-les clics et le défilement ; la page blockedex affiche le même avancement en haut.
+« La Blocklist travaille dans cet onglet : ne touchez à rien » qui affiche l'étape en cours et bloque
+les clics et le défilement ; la page La Blocklist affiche le même avancement en haut.
 
 C'est ce fichier que vous envoyez à quelqu'un pour qu'il bloque les mêmes comptes.
 
@@ -118,7 +143,7 @@ Vos choix sont gardés, même si vous fermez la page.
    vous pouvez décocher l'option « Lire d'abord mes profils bloqués ». Sur Instagram, chaque profil
    est vérifié un par un.
 5. Un onglet passe ensuite d'un profil à l'autre pour les comptes restants. **Laissez la page
-   blockedex ouverte et ne touchez pas à cet onglet** tant que le traitement n'est pas terminé :
+   La Blocklist ouverte et ne touchez pas à cet onglet** tant que le traitement n'est pas terminé :
    y cliquer ou y naviguer peut faire échouer des blocages.
 
 Chaque compte affiche son résultat :
@@ -149,8 +174,8 @@ déjà traités sont sautés. Avec une longue liste, faites 100 comptes, puis re
 
 ## 4. Mettre à jour
 
-Téléchargez le nouveau zip, remplacez le contenu de votre dossier `blockedex` par celui du zip, puis
-dans `chrome://extensions` cliquez sur la flèche ↻ de la carte blockedex.
+Téléchargez le nouveau zip, remplacez le contenu de votre dossier `La Blocklist` par celui du zip, puis
+dans `chrome://extensions` cliquez sur la flèche ↻ de la carte La Blocklist.
 
 ## 5. Problèmes fréquents
 
@@ -185,7 +210,7 @@ vérifie la mécanique, pas les libellés du vrai Threads.
 Pour créer le zip d'une release :
 
 ```bash
-cd extension && zip -r ../blockedex-extension.zip . -x 'tests/*'
+cd extension && zip -r ../la-blocklist-extension.zip . -x 'tests/*'
 ```
 
 Le dossier [`blockedex/`](blockedex/) contient une ancienne version en ligne de commande Python. Elle

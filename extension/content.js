@@ -36,7 +36,7 @@
     return svg ? svg.getAttribute('aria-label').trim() : '';
   };
   // --- Voile sur l'onglet de travail ---
-  // Pendant que blockedex manipule la page, un voile la recouvre : il explique qu'il ne faut pas y
+  // Pendant que La Blocklist manipule la page, un voile la recouvre : il explique qu'il ne faut pas y
   // toucher et bloque souris, défilement et clavier de l'utilisateur. Nos propres actions (el.click(),
   // scrollTop) ne passent pas par ces événements et continuent de fonctionner.
   const OVERLAY_ID = 'blockedex-overlay';
@@ -66,10 +66,10 @@
           @keyframes bx-spin { to { transform: rotate(360deg); } }
         </style>
         <div class="bx-card">
-          <div class="bx-head"><span class="bx-spin"></span><span>blockedex travaille dans cet onglet : ne touchez à rien</span></div>
+          <div class="bx-head"><span class="bx-spin"></span><span>La Blocklist travaille dans cet onglet : ne touchez à rien</span></div>
           <p class="bx-step"></p>
           <p class="bx-hint">Ne cliquez pas, ne faites pas défiler et ne fermez pas cet onglet : vous feriez échouer
-            l'opération. Vous serez ramené automatiquement sur la page blockedex, où l'avancement est affiché.</p>
+            l'opération. Vous serez ramené automatiquement sur la page La Blocklist, où l'avancement est affiché.</p>
         </div>`;
       // Hors de <body> : l'application Threads ne le touche pas et il n'entre pas dans le texte de la page.
       document.documentElement.append(overlay);
@@ -81,7 +81,7 @@
     document.getElementById(OVERLAY_ID)?.remove();
     for (const type of BLOCKED_EVENTS) window.removeEventListener(type, swallow, { capture: true });
   }
-  // Éléments ajoutés par blockedex (voile, boutons « Bloquer » d'inline.js) : à ignorer dans la page.
+  // Éléments ajoutés par La Blocklist (voile, boutons « Bloquer » d'inline.js) : à ignorer dans la page.
   const isOurs = (el) => Boolean(el.closest(`#${OVERLAY_ID}, .blockedex-btn`));
 
   const find = (re, root = document) =>
@@ -236,7 +236,7 @@
   const profileLinks = (dialog) =>
     [...dialog.querySelectorAll('a[href^="/@"]')].map((a) => handleFromHref(a.getAttribute('href'))).filter(Boolean);
 
-  // Étape en cours, affichée en direct sur la page blockedex (bandeau « Traitement en cours »).
+  // Étape en cours, affichée en direct sur la page La Blocklist (bandeau « Traitement en cours »).
   const progress = (step, count) => {
     if (document.getElementById(OVERLAY_ID)) showOverlay(step); // même étape sur le voile de l'onglet
     chrome.runtime.sendMessage({ type: 'blockedex:progress', step, count }).catch(() => {});
@@ -341,7 +341,7 @@
   }
 
   // Chaque opération pose le voile pendant qu'elle travaille. Après un blocage il reste en place pendant
-  // la pause qui précède le compte suivant ; la page blockedex appelle `release` à la fin de la série.
+  // la pause qui précède le compte suivant ; la page La Blocklist appelle `release` à la fin de la série.
   const withOverlay = (fn, step, keepAfter) => async () => {
     showOverlay(step);
     try {

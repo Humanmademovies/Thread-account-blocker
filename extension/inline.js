@@ -53,7 +53,7 @@
     button.dataset.state = status;
     button.textContent = LABELS[status] || LABELS.failed;
     button.disabled = !['idle', 'failed', 'login_required'].includes(status);
-    button.title = status === 'idle' ? `Bloquer @${button.dataset.handle} (blockedex)` : '';
+    button.title = status === 'idle' ? `Bloquer @${button.dataset.handle} (La Blocklist)` : '';
   };
   const update = (handle) => {
     for (const button of document.querySelectorAll('button.blockedex-btn')) {

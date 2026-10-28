@@ -1,4 +1,6 @@
-import { STATUS, isDone, normalizeHandle, parseBlocklists, runBlocks, writeBlocklist, BlocklistError } from './lib.js';
+import {
+  STARTER, STATUS, applyStarterUpdate, isDone, normalizeHandle, parseBlocklists, runBlocks, writeBlocklist, BlocklistError,
+} from './lib.js';
 
 const THREADS = 'https://www.threads.com';
 const PRIVACY_URL = `${THREADS}/settings/privacy`;
@@ -22,8 +24,9 @@ const PLATFORMS = {
 
 // `excluded` : comptes décochés dans la liste, qui ne seront pas bloqués.
 // `settings.precheck` : lire d'abord la liste « Profils bloqués » pour sauter les comptes déjà bloqués.
+// `starter` : état de la liste de départ, mis à jour aussi par background.js (voir refreshStarter).
 const DEFAULTS = {
-  list: [], results: {}, resultsInstagram: {}, excluded: [],
+  list: [], results: {}, resultsInstagram: {}, excluded: [], starter: {},
   settings: { platform: 'threads', min: 8, max: 20, limit: 100, precheck: true },
 };
 let store = structuredClone(DEFAULTS);
@@ -176,7 +179,13 @@ const selectedList = () => {
   return store.list.filter((h) => !excluded.has(h));
 };
 
+let listChangedWhileRunning = false; // mise à jour de la liste de départ arrivée pendant un traitement
+
 function refresh() {
+  if (!running && listChangedWhileRunning) {
+    listChangedWhileRunning = false;
+    renderChecklist();
+  }
   const total = store.list.length;
   const selected = selectedList();
   const done = selected.filter((h) => isDone(results()[h])).length;
@@ -201,6 +210,8 @@ function refresh() {
   $('platform-hint').hidden = platform().precheck;
   $('precheck').disabled = !idle || !platform().precheck;
   $('read-following').disabled = !idle;
+  $('starter-add').disabled = !idle;
+  $('starter-refresh').disabled = !idle;
   $('download-list').disabled = !selected.length;
   $('check-all').disabled = !idle;
   $('uncheck-all').disabled = !idle;
@@ -219,6 +230,8 @@ function setTag(li, handle) {
 
 function renderChecklist() {
   const excluded = new Set(store.excluded);
+  // Noms affichés pour les comptes de la liste de départ (« @marine_lepen · Marine Le Pen »).
+  const names = new Map((store.starter.accounts || []).map((a) => [a.handle, a.name]));
   items.clear();
   const ul = $('accounts');
   ul.replaceChildren(...store.list.map((handle) => {
@@ -228,6 +241,12 @@ function renderChecklist() {
     li.querySelector('input').checked = !excluded.has(handle);
     li.classList.toggle('off', excluded.has(handle));
     li.querySelector('.name').textContent = `@${handle}`;
+    if (names.get(handle)) {
+      const who = document.createElement('span');
+      who.className = 'who';
+      who.textContent = ` · ${names.get(handle)}`;
+      li.querySelector('.name').append(who);
+    }
     setTag(li, handle);
     items.set(handle, li);
     return li;
@@ -275,8 +294,8 @@ $('check-all').addEventListener('click', () => setExcluded(visibleHandles(), fal
 $('download-list').addEventListener('click', () => {
   const handles = selectedList();
   const day = new Date().toISOString().slice(0, 10);
-  download(`blockedex-liste-${day}.txt`,
-    `# Liste blockedex du ${day} (${handles.length} ${handles.length === 1 ? 'compte' : 'comptes'})\n` + handles.map((h) => `@${h}\n`).join(''));
+  download(`la-blocklist-${day}.txt`,
+    `# La Blocklist, liste du ${day} (${handles.length} ${handles.length === 1 ? 'compte' : 'comptes'})\n` + handles.map((h) => `@${h}\n`).join(''));
 });
 $('uncheck-all').addEventListener('click', () => setExcluded(visibleHandles(), true));
 
@@ -299,10 +318,14 @@ function readSettings() {
 async function useList(handles) {
   store.list = handles;
   store.excluded = [];
+  // La liste est remplacée : la liste de départ n'en fait plus partie, ses mises à jour ne la
+  // réintroduisent pas. On peut l'ajouter à nouveau depuis sa carte.
+  if (store.starter.added) store.starter = { ...store.starter, added: false };
   await persist();
   $('filter').value = '';
   renderChecklist();
   refresh();
+  renderStarter();
 }
 
 /** « 501 », « 1,2 k », « 1.0M » → nombre approximatif, ou null. */
@@ -397,7 +420,7 @@ async function blockOne(handle) {
 
 /**
  * Lit la liste « Profils bloqués » de Threads (au premier plan : la liste ne se charge pas dans un
- * onglet masqué), puis rend la main à la page blockedex.
+ * onglet masqué), puis rend la main à la page La Blocklist.
  */
 async function readInForeground(url, method) {
   const appTab = await chrome.tabs.getCurrent();
@@ -554,7 +577,7 @@ $('export-btn').addEventListener('click', async () => {
       setStatus(status, 'Aucun compte récupéré : rien n\'a été enregistré (liste vide, ou interface modifiée ?).', 'warn');
     } else {
       const format = $('format').value;
-      download(`blockedex-bloques-${new Date().toISOString().slice(0, 10)}.${format}`, writeBlocklist(result.handles, format));
+      download(`la-blocklist-bloques-${new Date().toISOString().slice(0, 10)}.${format}`, writeBlocklist(result.handles, format));
       setStatus(status, `${result.handles.length} comptes exportés.`, 'ok');
     }
   } catch (e) {
@@ -563,6 +586,110 @@ $('export-btn').addEventListener('click', async () => {
     progressEl = null;
     running = false;
     refresh();
+  }
+});
+
+// --- Liste de départ ---
+
+const dateTime = (ms) => new Date(ms).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+const preview = (handles) => handles.slice(0, 5).map((h) => `@${h}`).join(', ') + (handles.length > 5 ? '…' : '');
+
+// Résultat du dernier « Ajouter à ma liste », affiché en tête jusqu'à la prochaine nouveauté.
+let starterNote = '';
+
+function renderStarter(unseen = 0) {
+  const s = store.starter;
+  $('starter-add').textContent = s.added ? 'Ajouter à nouveau' : 'Ajouter à ma liste';
+  $('starter-auto').checked = s.added ? Boolean(s.auto) : $('starter-auto').checked;
+  $('starter-refresh').hidden = !s.added;
+  if (!s.added) return setStatus($('starter-status'), '');
+  const parts = [starterNote || `Ajoutée : ${(s.handles || []).length} comptes dans la liste du site.`];
+  parts.push(`Vérifiée sur le site le ${dateTime(s.lastCheck)}.`);
+  const n = (count, one, many) => `${count} ${count === 1 ? one : many}`;
+  if (unseen) {
+    parts.push(`${n(unseen, 'nouveau compte ajouté', 'nouveaux comptes ajoutés')} à votre liste depuis votre dernière visite : ${preview(s.lastAdded || [])}.`);
+  } else if (s.lastChange) {
+    const changes = [];
+    if (s.lastAdded?.length) changes.push(`${n(s.lastAdded.length, 'ajouté', 'ajoutés')} (${preview(s.lastAdded)})`);
+    if (s.lastRemoved?.length) changes.push(`${n(s.lastRemoved.length, 'retiré', 'retirés')} (${preview(s.lastRemoved)})`);
+    if (changes.length) parts.push(`Dernière évolution le ${dateTime(s.lastChange)} : ${changes.join(', ')}.`);
+  }
+  if (!s.auto) parts.push('Mise à jour automatique désactivée.');
+  if (s.error) parts.push(`Dernière vérification impossible : ${s.error}.`);
+  setStatus($('starter-status'), parts.join(' '), s.error ? 'warn' : unseen || starterNote ? 'ok' : '');
+}
+
+$('starter-add').addEventListener('click', async () => {
+  const status = $('starter-status');
+  setStatus(status, `Téléchargement de la liste ${STARTER.name}…`, 'working');
+  $('starter-add').disabled = true;
+  try {
+    const response = await chrome.runtime.sendMessage({ type: 'starter:fetch' });
+    if (!response?.ok) return setStatus(status, `Impossible de télécharger la liste : ${response?.error || 'pas de réponse'}.`, 'err');
+    const handles = response.accounts.map((a) => a.handle);
+    const wasEmpty = !store.list.length;
+    const before = new Set(store.list);
+    const { list } = applyStarterUpdate(store.list, store.starter.handles || [], handles);
+    store.list = list;
+    store.starter = {
+      ...store.starter, added: true, auto: $('starter-auto').checked, handles, accounts: response.accounts,
+      lastCheck: Date.now(), error: null, unseen: 0, lastChange: null, lastAdded: [], lastRemoved: [],
+    };
+    // Liste Instagram : si c'est la première liste chargée, on passe directement sur Instagram.
+    if (wasEmpty && store.settings.platform !== STARTER.platform) {
+      $('platform').value = STARTER.platform;
+      $('platform').dispatchEvent(new Event('change'));
+    }
+    const fresh = handles.filter((h) => !before.has(h)).length;
+    starterNote = `Ajoutée : ${handles.length} comptes de la liste de départ, dont ${fresh} nouveaux dans votre liste.`
+      + ' Relisez-les dans « 2. Appliquer les blocages ».'
+      + (platform().name !== 'Instagram' ? ' C\'est une liste Instagram : choisissez « Instagram » dans Réseau pour la bloquer là.' : '');
+    unseenShown = 0;
+    await persist();
+    renderChecklist();
+    refresh();
+    renderStarter();
+  } finally {
+    $('starter-add').disabled = running;
+  }
+});
+
+$('starter-auto').addEventListener('change', async () => {
+  if (!store.starter.added) return;
+  store.starter = { ...store.starter, auto: $('starter-auto').checked };
+  await persist();
+  renderStarter();
+});
+
+$('starter-refresh').addEventListener('click', async () => {
+  setStatus($('starter-status'), 'Vérification de la liste sur le site…', 'working');
+  const response = await chrome.runtime.sendMessage({ type: 'starter:refresh' });
+  if (!response?.ok) setStatus($('starter-status'), `Vérification impossible : ${response?.error || 'pas de réponse'}.`, 'err');
+  // Le reste (liste, état) arrive par chrome.storage.onChanged.
+});
+
+// background.js met à jour la liste et l'état de la liste de départ chaque jour : on garde la page à jour.
+// Les nouveautés restent affichées jusqu'au rechargement de la page, même après le retrait du badge.
+let unseenShown = 0;
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== 'local') return;
+  if (changes.starter?.newValue) {
+    store.starter = changes.starter.newValue;
+    if (store.starter.unseen) {
+      unseenShown = store.starter.unseen;
+      starterNote = '';
+      chrome.runtime.sendMessage({ type: 'starter:seen' }).catch(() => {});
+    }
+    renderStarter(unseenShown);
+  }
+  const list = changes.list?.newValue;
+  if (list && JSON.stringify(list) !== JSON.stringify(store.list)) {
+    store.list = list;
+    if (running) listChangedWhileRunning = true;
+    else {
+      renderChecklist();
+      refresh();
+    }
   }
 });
 
@@ -577,4 +704,8 @@ $('export-btn').addEventListener('click', async () => {
   $('precheck').checked = store.settings.precheck !== false; // absent des réglages des versions précédentes
   renderChecklist();
   refresh();
+  unseenShown = store.starter.unseen || 0;
+  renderStarter(unseenShown);
+  // Les nouveautés sont affichées : on retire le badge « +N » de l'icône.
+  if (unseenShown) chrome.runtime.sendMessage({ type: 'starter:seen' }).catch(() => {});
 })();

@@ -3,20 +3,20 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>blockedex</title>
+  <title>La Blocklist</title>
   <link rel="stylesheet" href="app.css">
 </head>
 <body>
   <main>
     <header>
-      <h1>blockedex</h1>
+      <h1>La Blocklist</h1>
       <p class="lead">Importez, appliquez et exportez des listes de blocage sur Threads et Instagram, depuis votre Chrome déjà connecté.</p>
     </header>
 
     <div id="busy" class="busy" hidden>
       <div class="busy-head">
         <span class="spinner" aria-hidden="true"></span>
-        <strong>Traitement en cours : ne touchez à rien.</strong>
+        <strong>La Blocklist travaille : ne touchez à rien.</strong>
         <span id="busy-time" class="busy-time" title="Temps écoulé">0:00</span>
       </div>
       <p id="busy-step" class="busy-step" role="status" aria-live="polite">Démarrage…</p>
@@ -26,7 +26,23 @@
 
     <section id="import">
       <h2>1. Importer une liste</h2>
-      <p class="hint">Un compte par ligne : <code>@pseudo</code>, <code>pseudo</code> ou lien de profil. Fichiers <code>.txt</code>, <code>.csv</code> ou <code>.json</code> acceptés.</p>
+      <div class="starter">
+        <div class="starter-head">
+          <div>
+            <p class="starter-title">Liste de départ : « On bloque l’extrême droite »</p>
+            <p class="hint">Comptes Instagram (personnalités, fachosphère, partis et médias) proposés par MISE AU POING sur
+              <a href="https://www.onbloquelextremedroite.fr/liste" target="_blank" rel="noopener noreferrer">onbloquelextremedroite.fr</a>.
+              Ils s'ajoutent à votre liste, cochés, pour que vous les relisiez.</p>
+          </div>
+          <button id="starter-add" class="primary">Ajouter à ma liste</button>
+        </div>
+        <label class="check"><input type="checkbox" id="starter-auto" checked> Mettre à jour automatiquement chaque jour (les nouveaux comptes sont ajoutés, ceux retirés par le site sont enlevés ; rien n'est bloqué sans vous)</label>
+        <div class="row starter-tools">
+          <button id="starter-refresh" class="quiet" hidden>Vérifier les mises à jour maintenant</button>
+        </div>
+        <p id="starter-status" class="status" role="status"></p>
+      </div>
+      <p class="hint">Ou votre propre liste, un compte par ligne : <code>@pseudo</code>, <code>pseudo</code> ou lien de profil. Fichiers <code>.txt</code>, <code>.csv</code> ou <code>.json</code> acceptés.</p>
       <textarea id="paste" rows="6" spellcheck="false" placeholder="@spam_account&#10;https://www.threads.com/@bot.farm"></textarea>
       <div class="row">
         <input type="file" id="file" accept=".txt,.csv,.json" multiple>
