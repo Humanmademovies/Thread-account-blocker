@@ -6,7 +6,8 @@ const $ = (id) => document.getElementById(id);
 
 // --- Stockage (chrome.storage.local) : liste, progression et réglages survivent à la fermeture ---
 
-const DEFAULTS = { list: [], results: {}, settings: { min: 8, max: 20, limit: 100 } };
+// `excluded` : comptes décochés dans la liste, qui ne seront pas bloqués.
+const DEFAULTS = { list: [], results: {}, excluded: [], settings: { min: 8, max: 20, limit: 100 } };
 let store = structuredClone(DEFAULTS);
 const persist = () => chrome.storage.local.set(store);
 
@@ -103,22 +104,102 @@ const LABELS = {
   [STATUS.FAILED]: ['échec', 'err'],
 };
 
+const selectedList = () => {
+  const excluded = new Set(store.excluded);
+  return store.list.filter((h) => !excluded.has(h));
+};
+
 function refresh() {
   const total = store.list.length;
-  const done = store.list.filter((h) => isDone(store.results[h])).length;
+  const selected = selectedList();
+  const done = selected.filter((h) => isDone(store.results[h])).length;
+  const off = total - selected.length;
   const idle = !running;
   $('counts').textContent = total
-    ? `${total} comptes dans la liste : ${done} déjà traités, ${total - done} à traiter.`
+    ? `${total} comptes dans la liste : ${done} déjà traités, ${selected.length - done} à traiter`
+      + (off ? ` ; ${off} ${off === 1 ? 'décoché' : 'décochés'}` : '') + '.'
     : 'Aucune liste chargée.';
-  $('start').disabled = !idle || total === done;
+  $('start').disabled = !idle || selected.length === done;
   $('stop').disabled = idle;
   $('reset').disabled = !idle || !Object.keys(store.results).length;
   $('load').disabled = !idle;
   $('export-btn').disabled = !idle;
-  $('bar').hidden = !total;
-  $('bar').max = Math.max(total, 1);
+  $('bar').hidden = !selected.length;
+  $('bar').max = Math.max(selected.length, 1);
   $('bar').value = done;
+  $('picker').hidden = !total;
+  for (const box of $('accounts').querySelectorAll('input')) box.disabled = !idle;
+  $('check-all').disabled = !idle;
+  $('uncheck-all').disabled = !idle;
 }
+
+// --- Liste à cocher ---
+
+const items = new Map(); // handle -> <li>
+
+function setTag(li, handle) {
+  const tag = li.querySelector('.tag');
+  const label = LABELS[store.results[handle]];
+  tag.textContent = label ? label[0] : '';
+  tag.className = `tag ${label ? label[1] : ''}`.trim();
+}
+
+function renderChecklist() {
+  const excluded = new Set(store.excluded);
+  items.clear();
+  const ul = $('accounts');
+  ul.replaceChildren(...store.list.map((handle) => {
+    const li = document.createElement('li');
+    li.dataset.handle = handle;
+    li.innerHTML = '<label><input type="checkbox"><span class="name"></span><span class="tag"></span></label>';
+    li.querySelector('input').checked = !excluded.has(handle);
+    li.classList.toggle('off', excluded.has(handle));
+    li.querySelector('.name').textContent = `@${handle}`;
+    setTag(li, handle);
+    items.set(handle, li);
+    return li;
+  }));
+  applyFilter();
+}
+
+function applyFilter() {
+  const query = $('filter').value.trim().replace(/^@/, '').toLowerCase();
+  let shown = 0;
+  for (const [handle, li] of items) {
+    li.hidden = Boolean(query) && !handle.includes(query);
+    if (!li.hidden) shown++;
+  }
+  $('accounts').querySelector('.empty')?.remove();
+  if (!shown && items.size) {
+    const li = document.createElement('li');
+    li.className = 'empty';
+    li.textContent = 'Aucun compte ne correspond.';
+    $('accounts').append(li);
+  }
+}
+
+async function setExcluded(handles, exclude) {
+  const excluded = new Set(store.excluded);
+  for (const h of handles) {
+    if (exclude) excluded.add(h); else excluded.delete(h);
+    const li = items.get(h);
+    li.querySelector('input').checked = !exclude;
+    li.classList.toggle('off', exclude);
+  }
+  store.excluded = store.list.filter((h) => excluded.has(h));
+  await persist();
+  refresh();
+}
+
+const visibleHandles = () => [...items].filter(([, li]) => !li.hidden).map(([h]) => h);
+
+$('accounts').addEventListener('change', (e) => {
+  const li = e.target.closest('li');
+  if (li) setExcluded([li.dataset.handle], !e.target.checked);
+});
+$('filter').addEventListener('input', applyFilter);
+$('check-all').addEventListener('click', () => setExcluded(visibleHandles(), false));
+$('uncheck-all').addEventListener('click', () => setExcluded(visibleHandles(), true));
 
 function readSettings() {
   const num = (id, fallback) => {
@@ -147,7 +228,10 @@ $('load').addEventListener('click', async () => {
   }
   if (!parsed.handles.length) return setStatus(summary, 'Aucun compte valide trouvé.', 'err');
   store.list = parsed.handles;
+  store.excluded = [];
   await persist();
+  $('filter').value = '';
+  renderChecklist();
   const extra = [];
   if (parsed.duplicates) extra.push(`${parsed.duplicates} doublons ignorés`);
   if (parsed.invalid.length) extra.push(`${parsed.invalid.length} entrées invalides (ex. ${JSON.stringify(parsed.invalid[0])})`);
@@ -175,7 +259,8 @@ async function blockOne(handle) {
 $('start').addEventListener('click', async () => {
   const settings = readSettings();
   store.settings = settings;
-  const todo = store.list.filter((h) => !isDone(store.results[h])).length;
+  const handles = selectedList();
+  const todo = handles.filter((h) => !isDone(store.results[h])).length;
   const planned = settings.limit ? Math.min(todo, settings.limit) : todo;
   if (!confirm(`Bloquer jusqu'à ${planned} comptes sur Threads avec votre compte connecté ?`)) return;
 
@@ -184,7 +269,7 @@ $('start').addEventListener('click', async () => {
   refresh();
   log(`Démarrage : ${planned} comptes prévus.`);
   const summary = await runBlocks({
-    handles: store.list,
+    handles,
     results: store.results,
     block: blockOne,
     sleep,
@@ -195,6 +280,7 @@ $('start').addEventListener('click', async () => {
     onResult: async (handle, status, index, total) => {
       const [label, kind] = LABELS[status];
       log(`[${index + 1}/${total}] @${handle} : ${label}`, kind);
+      setTag(items.get(handle), handle);
       await persist();
       refresh();
     },
@@ -211,6 +297,7 @@ $('reset').addEventListener('click', async () => {
   if (!confirm('Effacer la progression ? Les comptes de la liste seront retraités.')) return;
   store.results = {};
   await persist();
+  for (const [handle, li] of items) setTag(li, handle);
   logEl.replaceChildren();
   refresh();
 });
@@ -264,5 +351,6 @@ $('export-btn').addEventListener('click', async () => {
   $('min').value = store.settings.min;
   $('max').value = store.settings.max;
   $('limit').value = store.settings.limit;
+  renderChecklist();
   refresh();
 })();

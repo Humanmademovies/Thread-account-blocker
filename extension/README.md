@@ -16,10 +16,13 @@ les listes et la progression restent dans le stockage local de l'extension.
 
 1. **Importer** : collez des comptes (`@pseudo`, `pseudo` ou lien de profil) ou choisissez un fichier
    `.txt`, `.csv`, `.json`, puis « Charger la liste ».
-2. **Appliquer** : réglez les pauses et le plafond, puis « Démarrer ». Un onglet Threads s'ouvre en
+2. **Choisir** : la liste chargée s'affiche avec une case par compte, toutes cochées. Décochez ceux
+   à ne pas bloquer ; la recherche et « Tout cocher » / « Tout décocher » aident pour les longues listes.
+3. **Appliquer** : réglez les pauses et le plafond, puis « Démarrer » (seuls les comptes cochés sont
+   traités). Un onglet Threads s'ouvre en
    arrière-plan et parcourt les profils. Laissez la page blockedex ouverte ; « Arrêter » interrompt
    proprement, et relancer reprend où l'on s'était arrêté (les échecs sont retentés).
-3. **Exporter** : télécharge vos comptes bloqués actuels (Réglages › Confidentialité › Profils
+4. **Exporter** : télécharge vos comptes bloqués actuels (Réglages › Confidentialité › Profils
    bloqués). Le fichier se ré-importe tel quel à l'étape 1.
 
 Par défaut : pause aléatoire de 8 à 20 s entre deux blocages, 100 comptes maximum par session, arrêt
@@ -39,8 +42,9 @@ publier l'extension sur le Chrome Web Store (compte développeur et relecture pa
 - L'extension automatise l'interface web de Threads, ce que les conditions d'utilisation de Meta ne
   prévoient pas : un usage intensif peut entraîner des limitations de compte. Gardez les pauses.
 - Les libellés repérés dans la page (« More », « Block »/« Bloquer », « Profils bloqués »…) sont
-  regroupés en tête de `content.js`. Ils n'ont **pas** été éprouvés sur le vrai site Threads : si une
-  étape échoue, c'est là qu'on ajuste.
+  regroupés en tête de `content.js`. Ils ont été vérifiés sur le vrai site Threads (interface en
+  français, octobre 2026) : blocage, « déjà bloqué », compte introuvable et export. Si Threads change
+  son interface et qu'une étape échoue, c'est là qu'on ajuste.
 - Relisez toujours une liste reçue d'un tiers avant de l'appliquer.
 
 ## Développement
